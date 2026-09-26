@@ -1,0 +1,644 @@
+// Emprego Fácil MZ — esquema da base de dados.
+// Documentação: DATABASE.md
+//
+// Convenções:
+// - IDs: cuid (strings, não sequenciais → não expõem volume de dados).
+// - Dinheiro: inteiros em unidades mínimas (centavos) + código de moeda ISO 4217.
+// - Datas em UTC.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────
+// Identidade
+// ─────────────────────────────────────────────────────────────
+
+enum Role {
+  USER
+  EDITOR
+  ADMIN
+}
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique // sempre em minúsculas
+  passwordHash     String
+  name             String
+  phone            String?
+  role             Role      @default(USER)
+  locale           String    @default("pt-MZ")
+  emailVerifiedAt  DateTime?
+  termsAcceptedAt  DateTime
+  marketingConsent Boolean   @default(false)
+  isActive         Boolean   @default(true)
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  profile        Profile?
+  sessions       Session[]
+  passwordResets PasswordResetToken[]
+  cvs            CV[]
+  coverLetters   CoverLetter[]
+  documents      Document[]
+  orders         Order[]
+  downloads      Download[]
+  affiliate      Affiliate?
+  blogPosts      BlogPost[]
+  auditLogs      AuditLog[]
+
+  @@index([createdAt])
+}
+
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  headline  String? // profissão / título
+  location  String?
+  country   String   @default("MZ") // ISO 3166-1 alpha-2
+  currency  String   @default("MZN") // moeda preferida
+  whatsapp  String?
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique // SHA-256 do token do cookie; o token em claro nunca é guardado
+  userId     String
+  expiresAt  DateTime
+  userAgent  String?
+  ipHash     String?
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Currículos
+// ─────────────────────────────────────────────────────────────
+
+enum TemplateCategory {
+  GERAL
+  PRIMEIRO_EMPREGO
+  ADMINISTRATIVO
+  CONTABILIDADE
+  RECURSOS_HUMANOS
+  SAUDE
+  EDUCACAO
+  INFORMATICA
+  ENGENHARIA
+  VENDAS_MARKETING
+  EXECUTIVO
+}
+
+// Layouts implementados em código (src/cv/layouts). Um CVTemplate é uma variante
+// configurável (cor, categoria, textos de ajuda) de um layout.
+enum CvLayout {
+  CLASSICO
+  MODERNO
+  EXECUTIVO
+}
+
+model CVTemplate {
+  id          String           @id @default(cuid())
+  slug        String           @unique
+  name        String
+  description String
+  category    TemplateCategory @default(GERAL)
+  layout      CvLayout
+  accentColor String           @default("#1d4ed8") // hex
+  isActive    Boolean          @default(true)
+  isPremium   Boolean          @default(false)
+  sortOrder   Int              @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  cvs CV[]
+
+  @@index([isActive, sortOrder])
+}
+
+model CV {
+  id           String    @id @default(cuid())
+  userId       String
+  templateId   String?
+  title        String // nome interno, ex.: "CV — Contabilista"
+  locale       String    @default("pt-MZ")
+  // Dados pessoais
+  fullName     String    @default("")
+  jobTitle     String    @default("")
+  email        String    @default("")
+  phone        String    @default("")
+  location     String    @default("")
+  nationality  String?
+  birthDate    String? // texto livre opcional (não obrigatório em candidaturas)
+  linkedin     String?
+  website      String?
+  photoKey     String? // chave no StorageProvider (privado)
+  showPhoto    Boolean   @default(false)
+  // Conteúdo
+  summary      String    @default("")
+  referencesOnRequest Boolean @default(false)
+  hiddenSections String[] @default([]) // secções opcionais ocultas
+  currentStep  Int       @default(1)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template       CVTemplate?       @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  experiences    CVExperience[]
+  educations     CVEducation[]
+  skills         CVSkill[]
+  languages      CVLanguage[]
+  courses        CVCourse[]
+  references     CVReference[]
+  customSections CVCustomSection[]
+  downloads      Download[]
+
+  @@index([userId, updatedAt])
+}
+
+model CVExperience {
+  id          String  @id @default(cuid())
+  cvId        String
+  position    String
+  employer    String
+  location    String  @default("")
+  startDate   String  @default("") // texto livre: "Mar 2021", "2019"
+  endDate     String  @default("")
+  isCurrent   Boolean @default(false)
+  description String  @default("")
+  sortOrder   Int     @default(0)
+
+  cv CV @relation(fields: [cvId], references: [id], onDelete: Cascade)
+
+  @@index([cvId])
+}
+
+model CVEducation {
+  id          String  @id @default(cuid())
+  cvId        String
+  degree      String
+  institution String
+  location    String  @default("")
+  startDate   String  @default("")
+  endDate     String  @default("")
+  isCurrent   Boolean @default(false)
+  description String  @default("")
+  sortOrder   Int     @default(0)
+
+  cv CV @relation(fields: [cvId], references: [id], onDelete: Cascade)
+
+  @@index([cvId])
+}
+
+model CVSkill {
+  id        String  @id @default(cuid())
+  cvId      String
+  name      String
+  level     String? // opcional: Básico / Intermédio / Avançado
+  sortOrder Int     @default(0)
+
+  cv CV @relation(fields: [cvId], references: [id], onDelete: Cascade)
+
+  @@index([cvId])
+}
+
+model CVLanguage {
+  id        String @id @default(cuid())
+  cvId      String
+  name      String
+  level     String // Nativo / Fluente / Avançado / Intermédio / Básico
+  sortOrder Int    @default(0)
+
+  cv CV @relation(fields: [cvId], references: [id], onDelete: Cascade)
+
+  @@index([cvId])
+}
+
+model CVCourse {
+  id          String @id @default(cuid())
+  cvId        String
+  name        String
+  institution String @default("")
+  year        String @default("")
+  sortOrder   Int    @default(0)
+
+  cv CV @relation(fields: [cvId], references: [id], onDelete: Cascade)
+
+  @@index([cvId])
+}
+
+model CVReference {
+  id        String @id @default(cuid())
+  cvId      String
+  name      String
+  position  String @default("")
+  company   String @default("")
+  phone     String @default("")
+  email     String @default("")
+  sortOrder Int    @default(0)
+
+  cv CV @relation(fields: [cvId], references: [id], onDelete: Cascade)
+
+  @@index([cvId])
+}
+
+model CVCustomSection {
+  id        String @id @default(cuid())
+  cvId      String
+  title     String
+  content   String
+  sortOrder Int    @default(0)
+
+  cv CV @relation(fields: [cvId], references: [id], onDelete: Cascade)
+
+  @@index([cvId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Cartas e documentos (Fase 2)
+// ─────────────────────────────────────────────────────────────
+
+enum CoverLetterType {
+  CANDIDATURA
+  MOTIVACAO
+}
+
+model CoverLetter {
+  id             String          @id @default(cuid())
+  userId         String
+  type           CoverLetterType
+  title          String
+  senderName     String          @default("")
+  senderContact  String          @default("")
+  recipientName  String          @default("")
+  company        String          @default("")
+  position       String          @default("")
+  experience     String          @default("")
+  education      String          @default("")
+  skills         String          @default("")
+  motivation     String          @default("")
+  body           String          @default("") // texto final editado pelo utilizador
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt])
+}
+
+enum DocumentKind {
+  CV_PDF
+  CV_DOCX
+  LETTER_PDF
+  LETTER_DOCX
+  UPLOAD
+}
+
+// Ficheiros guardados em nome do utilizador (ex.: exportações arquivadas, uploads).
+model Document {
+  id         String       @id @default(cuid())
+  userId     String
+  kind       DocumentKind
+  title      String
+  storageKey String
+  mimeType   String
+  sizeBytes  Int
+  createdAt  DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Loja
+// ─────────────────────────────────────────────────────────────
+
+enum ProductType {
+  KIT
+  TEMPLATE_PACK
+  TOOL
+  SUBSCRIPTION
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+model Product {
+  id                  String        @id @default(cuid())
+  slug                String        @unique
+  name                String
+  tier                String? // etiqueta comercial: BASIC / PROFISSIONAL / PREMIUM
+  shortDescription    String
+  description         String // texto simples com parágrafos
+  type                ProductType   @default(KIT)
+  status              ProductStatus @default(DRAFT)
+  priceMinor          Int // centavos; 0 = gratuito
+  compareAtPriceMinor Int?
+  currency            String        @default("MZN")
+  features            String[]      @default([]) // "o que está incluído"
+  faq                 Json? // [{ q, a }]
+  imageUrl            String?
+  isFeatured          Boolean       @default(false)
+  sortOrder           Int           @default(0)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  files      ProductFile[]
+  orderItems OrderItem[]
+  coupons    Coupon[]      @relation("CouponProducts")
+
+  @@index([status, sortOrder])
+}
+
+model ProductFile {
+  id         String   @id @default(cuid())
+  productId  String
+  name       String // nome apresentado
+  fileName   String // nome no download
+  storageKey String
+  mimeType   String
+  sizeBytes  Int
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  downloads Download[]
+
+  @@index([productId])
+}
+
+enum OrderStatus {
+  PENDING
+  AWAITING_PAYMENT
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  number        String      @unique // ex.: EF-20260926-7K3P
+  userId        String?
+  customerName  String
+  customerEmail String
+  customerPhone String?
+  status        OrderStatus @default(PENDING)
+  subtotalMinor Int
+  discountMinor Int         @default(0)
+  totalMinor    Int
+  currency      String      @default("MZN")
+  couponId      String?
+  affiliateId   String?
+  paidAt        DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  coupon    Coupon?     @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  affiliate Affiliate?  @relation(fields: [affiliateId], references: [id], onDelete: SetNull)
+  items     OrderItem[]
+  payments  Payment[]
+
+  @@index([userId])
+  @@index([status, createdAt])
+  @@index([customerEmail])
+}
+
+model OrderItem {
+  id             String  @id @default(cuid())
+  orderId        String
+  productId      String?
+  productName    String // cópia no momento da compra
+  unitPriceMinor Int
+  quantity       Int     @default(1)
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+enum PaymentProviderId {
+  FREE
+  MOCK
+  MPESA
+  EMOLA
+  MKESH
+  CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+model Payment {
+  id                String            @id @default(cuid())
+  orderId           String
+  provider          PaymentProviderId
+  status            PaymentStatus     @default(PENDING)
+  amountMinor       Int
+  currency          String            @default("MZN")
+  providerReference String? // referência devolvida pelo gateway
+  payerPhone        String?
+  failureReason     String?
+  metadata          Json? // resposta do gateway SEM segredos
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerReference])
+  @@index([orderId])
+}
+
+model Coupon {
+  id               String    @id @default(cuid())
+  code             String    @unique // maiúsculas, ex.: EMPREGOMZ10
+  description      String?
+  percentOff       Int? // 1–100
+  amountOffMinor   Int?
+  currency         String    @default("MZN")
+  validFrom        DateTime?
+  validUntil       DateTime?
+  maxRedemptions   Int?
+  timesRedeemed    Int       @default(0)
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  products Product[] @relation("CouponProducts") // vazio = todos os produtos
+  orders   Order[]
+}
+
+enum DownloadKind {
+  CV_PDF
+  CV_DOCX
+  LETTER_PDF
+  LETTER_DOCX
+  PRODUCT_FILE
+}
+
+// Registo de downloads (histórico do utilizador + métricas).
+model Download {
+  id            String       @id @default(cuid())
+  userId        String?
+  kind          DownloadKind
+  cvId          String?
+  productFileId String?
+  label         String // nome apresentado no histórico
+  createdAt     DateTime     @default(now())
+
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cv          CV?          @relation(fields: [cvId], references: [id], onDelete: SetNull)
+  productFile ProductFile? @relation(fields: [productFileId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([kind, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Crescimento (Fase 3)
+// ─────────────────────────────────────────────────────────────
+
+enum AffiliateStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+model Affiliate {
+  id                String          @id @default(cuid())
+  userId            String?         @unique
+  code              String          @unique // ?ref=code
+  commissionPercent Int             @default(10)
+  clicks            Int             @default(0)
+  balanceMinor      Int             @default(0)
+  currency          String          @default("MZN")
+  status            AffiliateStatus @default(PENDING)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  orders Order[]
+}
+
+// Contactos recolhidos com consentimento (ex.: modelo gratuito).
+model Lead {
+  id        String   @id @default(cuid())
+  email     String?
+  phone     String?
+  name      String?
+  source    String // ex.: "modelo-gratuito"
+  consentAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Conteúdo e configuração
+// ─────────────────────────────────────────────────────────────
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model BlogPost {
+  id             String     @id @default(cuid())
+  slug           String     @unique
+  title          String
+  excerpt        String
+  content        String // Markdown
+  coverImageUrl  String?
+  status         PostStatus @default(DRAFT)
+  seoTitle       String?
+  seoDescription String?
+  authorId       String?
+  publishedAt    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([status, publishedAt])
+}
+
+// Linha única (id = "default"), editável no painel admin.
+model SiteSettings {
+  id              String   @id @default("default")
+  siteName        String   @default("Emprego Fácil MZ")
+  whatsappNumber  String? // formato internacional sem "+", ex.: 258840000000
+  whatsappMessage String?
+  contactEmail    String?
+  contactPhone    String?
+  facebookUrl     String?
+  instagramUrl    String?
+  tiktokUrl       String?
+  linkedinUrl     String?
+  supportHours    String?
+  updatedAt       DateTime @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String // ex.: "auth.login", "product.update"
+  entityType String?
+  entityId   String?
+  metadata   Json?
+  ipHash     String?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([action, createdAt])
+  @@index([entityType, entityId])
+}
+
+// Contadores de rate limiting (janela fixa). Partilhados entre instâncias serverless.
+model RateLimitBucket {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+}
