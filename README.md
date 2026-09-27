@@ -133,10 +133,13 @@ Os testes de integração e e2e usam uma base de dados **separada** (o nome tem 
 ```bash
 createdb emprego_test                 # uma vez
 # .env.test (versionado, sem segredos) aponta para emprego_test e ./storage-test
-npm test                              # 268 testes: auth, CV, 40 modelos × (HTML, PDF, DOCX), fotos, pedidos, pagamentos…
+npm test                              # 376 testes: auth, CV, 40 modelos × (HTML, PDF, DOCX), fotos, pedidos, pagamentos…
 npx playwright install chromium       # uma vez (ou CHROMIUM_PATH=/caminho/para/chrome)
 npm run test:e2e                      # prepara a BD de teste, faz build e testa em desktop e Pixel 7
 ```
+
+> Não correr `npm test` e `npm run test:e2e` **ao mesmo tempo**: ambos usam a base `emprego_test` e os
+> testes de integração limpam-na (`TRUNCATE`) — os testes e2e em curso ficariam sem dados.
 
 Cobertura principal:
 
