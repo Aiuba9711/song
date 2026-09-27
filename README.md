@@ -36,7 +36,11 @@ Pensada para smartphones Android e internet limitada.
 | Admin: Pagamentos pendentes (confirmar, rejeitar, pedir novo comprovativo) com auditoria | ✅ |
 | CV pago: **199 MT** por CV (valor na BD, por modelo ou padrão), marca d'água antes do pagamento, PDF limpo + DOCX editável depois | ✅ |
 | Admin: Modelos de CV (criar, editar design, duplicar, ativar/desativar, categoria, preço, imagem, ordem) | ✅ |
-| **Assistente de IA** «✨ Melhorar com IA» (resumo, objetivo, descrição de funções), sugestões de competências com prova no texto, análise da descrição da vaga — nunca inventa, nada muda sem «Aplicar sugestão», consentimento antes de enviar texto | ✅ |
+| **Cartas** de candidatura e de motivação: gerar a partir dos dados (nome, empresa, cargo, formação, experiência, competências, motivação, contacto), editar, copiar, PDF e Word | ✅ |
+| **Modelos de email** (candidatura, espontânea, envio de CV, acompanhamento, agradecimento, resposta a recrutador) com «Copiar email» | ✅ |
+| **Mensagens de WhatsApp** curtas com «Copiar mensagem» e «Abrir WhatsApp» (link wa.me seguro, indicativo configurável no admin) | ✅ |
+| Preços na base de dados: CV (199 MT, por modelo ou padrão), carta (configurável; 0 = grátis), kits (por produto) | ✅ |
+| **Assistente de IA** «✨ Melhorar com IA» (resumo, objetivo, descrição de funções, cartas, emails e WhatsApp), sugestões de competências com prova no texto, análise da descrição da vaga — nunca inventa, nada muda sem «Aplicar sugestão», consentimento antes de enviar texto | ✅ |
 | Cartão bancário | ⏳ placeholder — requer gateway oficial |
 | Integração por API com operadores, cartas, modelos de email/WhatsApp, cupões | ⏳ Fase 2 (restante) |
 
@@ -135,6 +139,7 @@ Cobertura principal:
 - **PDF / DOCX**: os 3 layouts geram ficheiros válidos (A4, margens, estilos, marcadores, acentos, fotografia opcional), CVs vazios não inventam conteúdo.
 - **Biblioteca de modelos**: ≥36 modelos com designs distintos, todas as 22 categorias e 17 estilos; para **cada** modelo, HTML, PDF e DOCX mostram todos os campos (nenhum desaparece) com e sem foto, cabem em A4, e o selo ATS corresponde ao design.
 - **Fluxo de modelo único**: escolher cria/troca o CV em preparação (nunca dois por comprar), modelo fixo após a compra, preço por modelo ou padrão, pré-visualização com marca d'água só antes da compra.
+- **Cartas, emails e WhatsApp**: geração só com os dados do utilizador (nada inventado, campos vazios omitidos), edição, cópia, PDF/DOCX (A4, caracteres especiais, textos longos em várias páginas), download gratuito vs. pago (402 → pagamento confirmado → 200), links wa.me seguros (números inválidos e tentativas de injeção recusados), acessibilidade e telemóvel (e2e).
 - **Fotografia**: WEBP/PNG/JPG, redução, remoção de EXIF, enquadramento igual no editor e no PDF, rota privada.
 - **Assistente de IA**: configurado / não configurado («Assistente de IA temporariamente indisponível.»), campos vazios, texto longo, caracteres especiais, dados pessoais substituídos antes do envio, consentimento, prompts maliciosos (no texto e na vaga), sugestões com empresas/números/certificações inventadas rejeitadas, e nenhuma alteração sem «Aplicar sugestão» (também em e2e).
 - **Pedidos e downloads**: produto gratuito → pedido pago de 0 MT → entrega; só quem tem pedido pago descarrega.

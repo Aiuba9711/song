@@ -32,7 +32,7 @@ export function StartCheckoutForm({
   defaults,
 }: {
   methods: Method[];
-  target: { produto?: string; cv?: string };
+  target: { produto?: string; cv?: string; carta?: string };
   defaults: { name: string; email: string; phone: string };
 }) {
   const [state, action] = useActionState(startCheckoutAction, {} as ActionState);
@@ -43,6 +43,7 @@ export function StartCheckoutForm({
       {state.error && <Alert tone="error">{state.error}</Alert>}
       {target.produto && <input type="hidden" name="produto" value={target.produto} />}
       {target.cv && <input type="hidden" name="cv" value={target.cv} />}
+      {target.carta && <input type="hidden" name="carta" value={target.carta} />}
 
       <fieldset>
         <legend className="mb-3 text-lg font-semibold text-ink">Como quer pagar?</legend>

@@ -1,6 +1,6 @@
 import { normalize } from "../guard";
 import type { AIProvider } from "../provider";
-import type { AiRequestParsed, CvSource } from "../types";
+import type { AiRequestParsed, CvSource, RewriteMode } from "../types";
 
 /**
  * Provedor de DEMONSTRAÇÃO e TESTES (AI_PROVIDER="mock").
@@ -63,7 +63,31 @@ function bullets(text: string): string[] {
   return lines.length > 1 ? lines : sentences(fixWords(text)).map((s) => s.replace(/\.$/, ""));
 }
 
+/** Cartas e emails: trata parágrafo a parágrafo (mantém saudação, linhas em branco e despedida). */
+function rewriteParagraphs(text: string, mode: RewriteMode): string {
+  const paragraphs = text
+    .replace(/\r\n?/g, "\n")
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  return paragraphs
+    .map((p, i) => {
+      // Saudação e despedida («Exmos. Senhores,», «Com os melhores cumprimentos,»): só arrumar.
+      if (/,$/.test(p) && p.length < 80) return capitalize(tidy(fixWords(p)));
+      const clean = mode === "improve" || mode === "correct" ? p : p.replace(FILLER, "");
+      const all = sentences(fixWords(clean)).map(capitalize);
+      const keep = mode === "shorten" && i > 0 && i < paragraphs.length - 1 ? all.slice(0, Math.max(1, Math.ceil(all.length / 2))) : all;
+      return keep.map((s) => (/[.!?]$/.test(s) ? s : `${s}.`)).join(" ");
+    })
+    .join("\n\n");
+}
+
 function rewrite(req: Extract<AiRequestParsed, { task: "rewrite" }>): { suggestion: string; notes: string[] } {
+  if (req.field === "letter_body" || req.field === "email_body") {
+    let out = rewriteParagraphs(req.text, req.mode);
+    if (req.mode === "shorten" && out.length >= req.text.trim().length) out = out.replace(FILLER, "");
+    return { suggestion: out, notes: [req.mode === "shorten" ? "Parágrafos reduzidos às ideias principais." : "Corrigidos espaços, maiúsculas e acentuação."] };
+  }
   const isList = req.field === "experience_description";
   const notes: string[] = [];
   let out: string;

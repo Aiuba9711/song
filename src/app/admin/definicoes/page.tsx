@@ -18,6 +18,8 @@ export default async function AdminSettingsPage() {
         defaults={{
           whatsappNumber: s.whatsappNumber ?? "",
           whatsappMessage: s.whatsappMessage ?? "",
+          whatsappCountryCode: s.whatsappCountryCode,
+          whatsappLinksEnabled: s.whatsappLinksEnabled,
           contactEmail: s.contactEmail ?? "",
           contactPhone: s.contactPhone ?? "",
           supportHours: s.supportHours ?? "",

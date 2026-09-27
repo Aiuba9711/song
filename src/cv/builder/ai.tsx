@@ -217,13 +217,13 @@ export function AiImprove({
   field: RewriteField;
   text: string;
   onApply: (value: string) => void;
-  context?: { jobTitle?: string; position?: string };
+  context?: { jobTitle?: string; position?: string; facts?: string };
   id: string;
 }) {
   const { status, jobDescription, run } = useAi();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<RewriteMode>("improve");
-  const canUseJob = field !== "experience_description" && jobDescription.trim().length > 0;
+  const canUseJob = (field === "summary" || field === "objective" || field === "letter_body") && jobDescription.trim().length > 0;
   const [useJob, setUseJob] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -239,7 +239,7 @@ export function AiImprove({
       field,
       mode,
       text,
-      context: { jobTitle: context?.jobTitle ?? "", position: context?.position ?? "" },
+      context: { jobTitle: context?.jobTitle ?? "", position: context?.position ?? "", facts: (context?.facts ?? "").slice(0, AI_LIMITS.facts) },
       jobDescription: canUseJob && useJob ? jobDescription.slice(0, AI_LIMITS.jobDescription) : "",
     });
     setBusy(false);

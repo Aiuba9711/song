@@ -38,9 +38,9 @@ const PROBLEMS = [
 
 const SOLUTIONS = [
   { icon: FileText, title: "CV profissional", text: "Modelos modernos e editáveis. Preencha passo a passo e descarregue em PDF e Word.", href: "/cv-modelos", cta: "Ver modelos" },
-  { icon: PenLine, title: "Cartas", text: "Modelos de carta de candidatura e de motivação, com orientação para cada parágrafo.", href: "/kits/modelo-gratuito", cta: "Modelo grátis" },
+  { icon: PenLine, title: "Cartas", text: "Gerador de carta de candidatura e de motivação: preencha os dados, edite e descarregue em PDF ou Word.", href: "/meu-espaco/cartas", cta: "Criar carta" },
   { icon: ClipboardList, title: "Entrevista", text: "Perguntas frequentes, o que o recrutador avalia e como estruturar a resposta.", href: "/kits", cta: "Ver kits" },
-  { icon: MessageSquareText, title: "Candidaturas", text: "Modelos de email e de mensagem de WhatsApp para contactar recrutadores.", href: "/kits", cta: "Ver kits" },
+  { icon: MessageSquareText, title: "Candidaturas", text: "Modelos de email e de mensagem de WhatsApp para contactar recrutadores, prontos a copiar.", href: "/meu-espaco/mensagens", cta: "Ver modelos" },
 ];
 
 const STEPS = [

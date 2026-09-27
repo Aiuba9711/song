@@ -23,7 +23,7 @@ import { CheckoutSteps } from "./steps";
 
 export const metadata: Metadata = { title: "Pagamento" };
 
-type Search = { produto?: string; cv?: string; pedido?: string };
+type Search = { produto?: string; cv?: string; carta?: string; pedido?: string };
 
 export default async function CheckoutPage({ searchParams }: { searchParams: Promise<Search> }) {
   const params = await searchParams;
@@ -32,7 +32,13 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
 
   if (params.pedido) return <PayOrder userId={user.id} orderNumber={params.pedido} />;
 
-  const target: CheckoutTarget | null = params.produto ? { productSlug: params.produto } : params.cv ? { cvId: params.cv } : null;
+  const target: CheckoutTarget | null = params.produto
+    ? { productSlug: params.produto }
+    : params.cv
+      ? { cvId: params.cv }
+      : params.carta
+        ? { letterId: params.carta }
+        : null;
   if (!target) redirect("/kits");
 
   let item;
@@ -51,7 +57,9 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
     }
     throw error;
   }
-  if (await alreadyOwns(user.id, item)) redirect(item.kind === "PRODUCT" ? "/meu-espaco/kits" : `/meu-espaco/cvs/${item.cvId}`);
+  if (await alreadyOwns(user.id, item)) {
+    redirect(item.kind === "PRODUCT" ? "/meu-espaco/kits" : item.kind === "LETTER_UNLOCK" ? `/meu-espaco/cartas/${item.letterId}/editar` : `/meu-espaco/cvs/${item.cvId}`);
+  }
 
   const [methods, account, site] = await Promise.all([
     listAvailableMethods(),
@@ -84,7 +92,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
         ) : (
           <StartCheckoutForm
             methods={methods}
-            target={{ produto: params.produto, cv: params.cv }}
+            target={{ produto: params.produto, cv: params.cv, carta: params.carta }}
             defaults={{ name: account.name, email: account.email, phone: account.phone ? `+${account.phone}` : "" }}
           />
         )}

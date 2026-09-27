@@ -23,6 +23,7 @@ export async function getPaymentSettings(): Promise<PaymentSettings> {
       currency: "MZN",
       defaultPriceMinor: 19900,
       cvPaywallEnabled: false,
+      letterPriceMinor: 0,
       cardEnabled: false,
       updatedAt: new Date(0),
     }
@@ -49,12 +50,18 @@ export const getPublicPaymentSummary = unstable_cache(
         const c = manualMethodConfig(s, m);
         return c.enabled && !!c.number;
       });
-      return { checkoutAvailable: anyManual && s.currency === "MZN", cvPaywallEnabled: s.cvPaywallEnabled, cvPriceMinor: s.defaultPriceMinor, currency: s.currency };
+      return {
+        checkoutAvailable: anyManual && s.currency === "MZN",
+        cvPaywallEnabled: s.cvPaywallEnabled,
+        cvPriceMinor: s.defaultPriceMinor,
+        letterPriceMinor: s.letterPriceMinor,
+        currency: s.currency,
+      };
     } catch (error) {
       console.error("[payments] definições indisponíveis", error);
-      return { checkoutAvailable: false, cvPaywallEnabled: false, cvPriceMinor: 19900, currency: "MZN" };
+      return { checkoutAvailable: false, cvPaywallEnabled: false, cvPriceMinor: 19900, letterPriceMinor: 0, currency: "MZN" };
     }
   },
-  ["payment-summary-v1"],
+  ["payment-summary-v2"],
   { tags: [PAYMENT_SETTINGS_TAG], revalidate: 600 },
 );

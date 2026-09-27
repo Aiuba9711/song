@@ -24,7 +24,14 @@ export default async function FailedPage({ searchParams }: { searchParams: Promi
   const cancelled = order.status === "CANCELLED";
   const reason = order.payments[0]?.reviewNote;
   const item = order.items[0];
-  const retryHref = item?.kind === "CV_UNLOCK" && item.cvId ? `/checkout?cv=${item.cvId}` : item?.product?.slug ? `/checkout?produto=${item.product.slug}` : "/kits";
+  const retryHref =
+    item?.kind === "CV_UNLOCK" && item.cvId
+      ? `/checkout?cv=${item.cvId}`
+      : item?.kind === "LETTER_UNLOCK" && item.letterId
+        ? `/checkout?carta=${item.letterId}`
+        : item?.product?.slug
+          ? `/checkout?produto=${item.product.slug}`
+          : "/kits";
 
   return (
     <div className="text-center">

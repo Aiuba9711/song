@@ -369,7 +369,14 @@ export async function getCvForExport(userId: string, cvId: string) {
   return { cv, content, design: designOf(cv), photo };
 }
 
-export async function recordDownload(input: { userId: string; kind: "CV_PDF" | "CV_DOCX" | "PRODUCT_FILE"; label: string; cvId?: string; productFileId?: string }) {
+export async function recordDownload(input: {
+  userId: string;
+  kind: "CV_PDF" | "CV_DOCX" | "LETTER_PDF" | "LETTER_DOCX" | "PRODUCT_FILE";
+  label: string;
+  cvId?: string;
+  letterId?: string;
+  productFileId?: string;
+}) {
   await db.download.create({ data: input }).catch((error) => console.error("[download] registo falhou", error));
 }
 

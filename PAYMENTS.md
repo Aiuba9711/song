@@ -91,7 +91,8 @@ Produto (ou CV com download pago)
 | Nome do titular | Opcional — mostrado ao cliente |
 | Instruções de pagamento | Uma instrução por linha, mostradas no checkout |
 | Moeda | Os pagamentos por carteira móvel só funcionam em MZN |
-| Valor padrão | Preço do download de um CV (ex.: 199 MT) |
+| Preço do CV | Valor padrão de um CV (ex.: 199 MT); cada modelo pode ter preço próprio |
+| Preço da carta | Download (PDF/DOCX) de uma carta; vazio ou 0 = gratuito. Gerar, editar e copiar são sempre gratuitos |
 | Cobrar o download de CVs | **Ligado por omissão** (CV a 199 MT). Escolher modelo, preencher e pré-visualizar (com marca d'água) são grátis; o PDF sem marca d'água e o DOCX exigem pagamento confirmado **por CV**. Pode ser desligado |
 | Cartão bancário | Sempre desativado até existir integração oficial |
 
@@ -106,6 +107,17 @@ Produto (ou CV com download pago)
 - Só um CV por comprar de cada vez (não se acumulam modelos gratuitamente). Quando o administrador
   confirma o pagamento, `markPaymentSucceeded` marca `CV.purchasedAt`: o modelo desse CV fica fixo.
 - A compra é por CV: uma cópia duplicada é um novo CV, por comprar.
+
+## Tabela de preços (tudo na base de dados)
+
+| Item | Onde se define | Predefinição |
+|---|---|---|
+| CV | Admin › Definições › Pagamentos (padrão) e Admin › Modelos de CV (por modelo) | 199 MT |
+| Carta | Admin › Definições › Pagamentos → «Preço da carta» | 0 (gratuita) |
+| Kits | Admin › Produtos (cada produto) | definido no seed |
+
+Com preço > 0, a carta segue o mesmo fluxo do CV: `/checkout?carta=<id>` → pagamento manual →
+só o administrador confirma → `CoverLetter.purchasedAt` e download libertado (`LETTER_UNLOCK`).
 
 ## Cartão bancário (futuro)
 

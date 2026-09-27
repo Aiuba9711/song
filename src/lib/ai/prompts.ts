@@ -30,6 +30,10 @@ const FIELD_INSTRUCTIONS: Record<RewriteField, string> = {
   objective: "Campo: objetivo profissional do CV (1 a 2 frases sobre a função que procura).",
   experience_description:
     "Campo: descrição das funções numa experiência profissional. Usa uma linha por tarefa, começando com «- » e um verbo de ação. Não inventes tarefas nem resultados.",
+  letter_body:
+    "Campo: corpo de uma carta de candidatura/motivação formal (português de Moçambique), da saudação («Exmos. Senhores,») até à despedida («Com os melhores cumprimentos,»). Mantém a saudação, a despedida e os parágrafos separados por uma linha em branco. Não acrescentes assinatura.",
+  email_body: "Campo: corpo de um email profissional para um recrutador. Cordial, claro e curto. Mantém a saudação e a despedida.",
+  whatsapp_message: "Campo: mensagem de WhatsApp profissional para um recrutador. Muito curta (no máximo 4 frases), educada, sem emojis nem abreviaturas.",
 };
 
 function sourcesBlock(sources: CvSource[]): string {
@@ -45,12 +49,21 @@ const strArray = (description: string, maxItems: number) => ({ type: "array", de
 export function buildPrompt(req: AiRequestParsed): Prompt {
   switch (req.task) {
     case "rewrite": {
-      const job = req.jobDescription.trim() && req.field !== "experience_description" ? req.jobDescription.trim() : "";
+      const job = req.jobDescription.trim() && (req.field === "summary" || req.field === "objective" || req.field === "letter_body") ? req.jobDescription.trim() : "";
       const user = [
         FIELD_INSTRUCTIONS[req.field],
         `Tarefa: ${MODE_INSTRUCTIONS[req.mode]}`,
         job ? "Adapta a ênfase à vaga abaixo, destacando apenas o que JÁ consta do texto do utilizador. Não copies requisitos da vaga como se fossem do candidato." : "",
-        fence("contexto", [req.context.jobTitle && `Cargo pretendido: ${req.context.jobTitle}`, req.context.position && `Cargo nesta experiência: ${req.context.position}`].filter(Boolean).join("\n") || "(sem contexto)"),
+        fence(
+          "contexto",
+          [
+            req.context.jobTitle && `Cargo pretendido: ${req.context.jobTitle}`,
+            req.context.position && `Cargo nesta experiência: ${req.context.position}`,
+            req.context.facts && `Dados indicados pelo utilizador:\n${req.context.facts}`,
+          ]
+            .filter(Boolean)
+            .join("\n") || "(sem contexto)",
+        ),
         job ? fence("vaga", job) : "",
         fence("texto_do_utilizador", req.text),
       ]

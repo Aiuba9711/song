@@ -20,6 +20,7 @@ export type PaymentSettingsValues = {
   currency: string;
   defaultPrice: string;
   cvPaywallEnabled: boolean;
+  letterPrice: string;
 };
 
 const METHODS = [
@@ -63,7 +64,8 @@ export function PaymentSettingsForm({ defaults }: { defaults: PaymentSettingsVal
       </Card>
 
       <Card className="space-y-4 p-5">
-        <h2 className="font-semibold">Preço e moeda</h2>
+        <h2 className="font-semibold">Preços e moeda</h2>
+        <p className="text-sm text-slate-600">Os preços dos kits definem-se em cada produto (Produtos). Nenhum preço está fixo no código.</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="currency" label="Moeda" hint="Os pagamentos por carteira móvel só funcionam em MZN." error={e.currency}>
             {(a) => (
@@ -76,7 +78,7 @@ export function PaymentSettingsForm({ defaults }: { defaults: PaymentSettingsVal
               </Select>
             )}
           </Field>
-          <Field id="defaultPrice" label="Valor padrão" hint="Preço do download de um CV (quando o download é pago). Ex.: 199" error={e.defaultPrice}>
+          <Field id="defaultPrice" label="Preço do CV" hint="Valor padrão de um CV (cada modelo pode ter preço próprio). Ex.: 199" error={e.defaultPrice}>
             {(a) => <Input {...a} name="defaultPrice" inputMode="decimal" defaultValue={defaults.defaultPrice} />}
           </Field>
         </div>
@@ -86,6 +88,15 @@ export function PaymentSettingsForm({ defaults }: { defaults: PaymentSettingsVal
           defaultChecked={defaults.cvPaywallEnabled}
           label="Cobrar o download de CVs (PDF e Word). Criar, editar e pré-visualizar continuam gratuitos."
         />
+        <Field
+          id="letterPrice"
+          label="Preço da carta"
+          optional
+          hint="Download em PDF e Word de uma carta de candidatura ou de motivação. Vazio ou 0 = gratuito. Gerar, editar e copiar o texto são sempre gratuitos."
+          error={e.letterPrice}
+        >
+          {(a) => <Input {...a} name="letterPrice" inputMode="decimal" defaultValue={defaults.letterPrice} placeholder="0" className="max-w-xs" />}
+        </Field>
       </Card>
 
       <Card className="p-5">

@@ -60,9 +60,9 @@ Guardar um CV substitui todas as listas numa transação (simples e consistente 
 | `Product` | Kits. `priceMinor` (0 = gratuito), `compareAtPriceMinor`, `status` (`DRAFT`/`ACTIVE`/`ARCHIVED`), `features[]`, `faq` (JSON), `tier`, `isFeatured`. Preços **editáveis no admin**. |
 | `ProductFile` | Ficheiro entregue (chave privada no storage). |
 | `Order` | `number` legível (`EF-AAAAMMDD-XXXX`), dados do cliente copiados, totais, estado (`PENDING`, `AWAITING_PAYMENT`, `PENDING_VERIFICATION`, `PAID`, `FAILED`, `CANCELLED`, `REFUNDED`), `paidAt`, `cancelledAt`. |
-| `OrderItem` | `kind` (`PRODUCT` ou `CV_UNLOCK`), `productId` ou `cvId`, cópia do nome e preço no momento da compra. |
+| `OrderItem` | `kind` (`PRODUCT`, `CV_UNLOCK` ou `LETTER_UNLOCK`), `productId`, `cvId` ou `letterId`, cópia do nome e preço no momento da compra. |
 | `Payment` | Tentativa de pagamento: `provider` (`FREE`, `MOCK`, `MPESA`, `EMOLA`, `MKESH`, `CARD`), `mode` (`MANUAL`/`API`), `status` (`PENDING`, `PENDING_VERIFICATION`, `RESUBMISSION_REQUESTED`, `SUCCEEDED`, `REJECTED`, `FAILED`, `CANCELLED`, `REFUNDED`). Manual: `payeeNumber` (cópia do número de destino), `payerName`, `payerPhone`, `transactionId`, `reportedPaidAt`, `proofKey`/`proofMime` (comprovativo privado), `submittedAt`, `reviewedAt`, `reviewedById`, `reviewNote`. API: `providerReference` (único por fornecedor). |
-| `PaymentSettings` | Linha única: números e estado de M-Pesa/e-Mola/mKesh, titular, instruções, moeda, valor padrão do CV (199 MT no seed), `cvPaywallEnabled` (ligado por omissão), `cardEnabled` (sempre falso sem gateway). Editável no admin. |
+| `PaymentSettings` | Linha única: números e estado de M-Pesa/e-Mola/mKesh, titular, instruções, moeda, valor padrão do CV (199 MT no seed), `cvPaywallEnabled` (ligado por omissão), `letterPriceMinor` (preço do download de uma carta; 0 = gratuito), `cardEnabled` (sempre falso sem gateway). Editável no admin. |
 | `Coupon` | Percentagem **ou** valor fixo, validade, limite de utilizações, produtos aplicáveis (vazio = todos). *(Fase 2)* |
 | `Download` | Histórico (CV PDF/DOCX, ficheiros de produto). |
 
@@ -77,8 +77,9 @@ oficial) muda um pedido para `PAID` — ver PAYMENTS.md.
 | `Affiliate` | Código `?ref=`, cliques, comissão %, saldo. *(Fase 3 — pagamentos a afiliados fora do MVP)* |
 | `Lead` | Contactos recolhidos com consentimento (ex.: modelo gratuito sem conta). *(Fase 3)* |
 | `BlogPost` | Artigos "Conselho de Carreira" em Markdown, SEO. *(Fase 3)* |
-| `CoverLetter`, `Document` | Cartas e documentos guardados. *(Fase 2)* |
-| `SiteSettings` | WhatsApp, email, telefone, horário, redes sociais — editável em `/admin/definicoes`. |
+| `CoverLetter` | Carta de candidatura (`CANDIDATURA`) ou de motivação (`MOTIVACAO`): dados (`senderName`, `senderContact`, `recipientName`, `company`, `position`, `education`, `experience`, `skills`, `motivation`, `city`), `subject` e `body` (texto final editado pelo utilizador), `purchasedAt` (quando a carta é paga). |
+| `Document` | Documentos guardados (reservado). |
+| `SiteSettings` | WhatsApp, email, telefone, horário, redes sociais; `whatsappCountryCode` (indicativo dos links «Abrir WhatsApp», 258) e `whatsappLinksEnabled` — editável em `/admin/definicoes`. |
 | `AuditLog` | Eventos de autenticação e administração (autor, ação, entidade, metadados, IP em hash). |
 | `RateLimitBucket` | Contadores de rate limiting partilhados entre instâncias. |
 

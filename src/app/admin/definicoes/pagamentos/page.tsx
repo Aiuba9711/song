@@ -28,6 +28,7 @@ export default async function PaymentSettingsPage() {
           currency: s.currency,
           defaultPrice: (s.defaultPriceMinor / 100).toString().replace(".", ","),
           cvPaywallEnabled: s.cvPaywallEnabled,
+          letterPrice: s.letterPriceMinor > 0 ? (s.letterPriceMinor / 100).toString().replace(".", ",") : "",
         }}
       />
     </>

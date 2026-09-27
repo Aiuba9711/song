@@ -31,6 +31,8 @@ export async function markPaymentSucceeded(
   // CV comprado: download final libertado e modelo fixado.
   const cvItems = await tx.orderItem.findMany({ where: { orderId: payment.orderId, kind: "CV_UNLOCK", cvId: { not: null } }, select: { cvId: true } });
   if (cvItems.length) await tx.cV.updateMany({ where: { id: { in: cvItems.map((i) => i.cvId!) }, purchasedAt: null }, data: { purchasedAt: new Date() } });
+  const letterItems = await tx.orderItem.findMany({ where: { orderId: payment.orderId, kind: "LETTER_UNLOCK", letterId: { not: null } }, select: { letterId: true } });
+  if (letterItems.length) await tx.coverLetter.updateMany({ where: { id: { in: letterItems.map((i) => i.letterId!) }, purchasedAt: null }, data: { purchasedAt: new Date() } });
 
   await tx.auditLog.create({
     data: {

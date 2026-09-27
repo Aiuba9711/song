@@ -12,8 +12,8 @@ export async function updatePaymentSettingsAction(_prev: ActionState, formData: 
   const user = await assertPermission("settings.manage");
   const parsed = paymentSettingsSchema.safeParse(formDataToObject(formData));
   if (!parsed.success) return { fieldErrors: fieldErrorsOf(parsed.error) };
-  const { defaultPrice, ...rest } = parsed.data;
-  const data = { ...rest, defaultPriceMinor: defaultPrice! };
+  const { defaultPrice, letterPrice, ...rest } = parsed.data;
+  const data = { ...rest, defaultPriceMinor: defaultPrice!, letterPriceMinor: letterPrice ?? 0 };
 
   const before = await db.paymentSettings.findUnique({ where: { id: "default" } });
   await db.paymentSettings.upsert({ where: { id: "default" }, create: { id: "default", ...data }, update: data });

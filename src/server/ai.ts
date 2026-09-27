@@ -97,7 +97,10 @@ function redactRequest(req: AiRequestParsed): { req: AiRequestParsed; map: Map<s
   const r = (t: string) => redact(t, map).text;
   switch (req.task) {
     case "rewrite":
-      return { req: { ...req, text: r(req.text), jobDescription: r(req.jobDescription), context: { jobTitle: r(req.context.jobTitle), position: r(req.context.position) } }, map };
+      return {
+        req: { ...req, text: r(req.text), jobDescription: r(req.jobDescription), context: { jobTitle: r(req.context.jobTitle), position: r(req.context.position), facts: r(req.context.facts) } },
+        map,
+      };
     case "suggest_skills":
       return { req: { ...req, sources: req.sources.map((s) => ({ ...s, text: r(s.text) })) }, map };
     case "analyze_job":
@@ -117,7 +120,7 @@ export function checkResult(req: AiRequestParsed, raw: unknown, map: Map<string,
       const original = req.text.trim();
       const suggestion = fix(parsed.data.suggestion, AI_LIMITS[req.field]);
       if (!suggestion) return { ok: false, code: "NO_RESULT", message: "Não foi possível gerar uma sugestão. Tente novamente." };
-      const u = findUngrounded(suggestion, [original, req.context.jobTitle, req.context.position]);
+      const u = findUngrounded(suggestion, [original, req.context.jobTitle, req.context.position, req.context.facts]);
       if (!isGrounded(u)) {
         return {
           ok: false,

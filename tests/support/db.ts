@@ -56,7 +56,7 @@ export async function createProduct(overrides: Partial<{ priceMinor: number; sta
 }
 
 /** Configuração de pagamentos de TESTE (números fictícios, nunca os reais). */
-export async function createPaymentSettings(overrides: Partial<{ cvPaywallEnabled: boolean; mpesaEnabled: boolean; emolaEnabled: boolean; mkeshEnabled: boolean; defaultPriceMinor: number; currency: string }> = {}) {
+export async function createPaymentSettings(overrides: Partial<{ cvPaywallEnabled: boolean; mpesaEnabled: boolean; emolaEnabled: boolean; mkeshEnabled: boolean; defaultPriceMinor: number; letterPriceMinor: number; currency: string }> = {}) {
   return db.paymentSettings.upsert({
     where: { id: "default" },
     update: overrides,

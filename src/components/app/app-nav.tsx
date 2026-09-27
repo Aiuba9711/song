@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, History, Home, Package, Receipt, UserRound } from "lucide-react";
+import { FileText, History, Home, Mail, MessageSquareText, Package, Receipt, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { href: "/meu-espaco", label: "Início", icon: Home, exact: true, mobile: true },
   { href: "/meu-espaco/cvs", label: "Meus CVs", icon: FileText, mobile: true },
+  { href: "/meu-espaco/cartas", label: "Cartas", icon: Mail, mobile: true },
+  { href: "/meu-espaco/mensagens", label: "Email e WhatsApp", icon: MessageSquareText },
   { href: "/meu-espaco/kits", label: "Meus kits", icon: Package, mobile: true },
   { href: "/meu-espaco/downloads", label: "Downloads", icon: History },
   { href: "/meu-espaco/compras", label: "Compras", icon: Receipt },
@@ -53,7 +55,7 @@ export function BottomNav() {
   const pathname = usePathname();
   return (
     <nav aria-label="Navegação" className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden print:hidden">
-      <ul className="grid grid-cols-4">
+      <ul className="grid grid-cols-5">
         {ITEMS.filter((i) => i.mobile).map(({ href, label, icon: Icon, exact }) => {
           const active = isActive(pathname, href, exact);
           return (

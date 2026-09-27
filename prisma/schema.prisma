@@ -343,11 +343,16 @@ model CoverLetter {
   education      String          @default("")
   skills         String          @default("")
   motivation     String          @default("")
+  city           String          @default("") // local que aparece na data (ex.: Maputo)
+  subject        String          @default("") // assunto da carta
   body           String          @default("") // texto final editado pelo utilizador
+  purchasedAt    DateTime? // compra confirmada (quando a carta é paga)
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+  downloads  Download[]
 
   @@index([userId, updatedAt])
 }
@@ -480,6 +485,7 @@ model Order {
 enum OrderItemKind {
   PRODUCT // kit/produto digital
   CV_UNLOCK // desbloqueio do download de um CV do utilizador
+  LETTER_UNLOCK // desbloqueio do download de uma carta do utilizador
 }
 
 model OrderItem {
@@ -488,17 +494,20 @@ model OrderItem {
   kind           OrderItemKind @default(PRODUCT)
   productId      String?
   cvId           String?
+  letterId       String?
   productName    String // cópia no momento da compra
   unitPriceMinor Int
   quantity       Int           @default(1)
 
   order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
-  cv      CV?      @relation(fields: [cvId], references: [id], onDelete: SetNull)
+  cv      CV?          @relation(fields: [cvId], references: [id], onDelete: SetNull)
+  letter  CoverLetter? @relation(fields: [letterId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
   @@index([productId])
   @@index([cvId])
+  @@index([letterId])
 }
 
 enum PaymentProviderId {
@@ -595,12 +604,14 @@ model Download {
   kind          DownloadKind
   cvId          String?
   productFileId String?
+  letterId      String?
   label         String // nome apresentado no histórico
   createdAt     DateTime     @default(now())
 
   user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
   cv          CV?          @relation(fields: [cvId], references: [id], onDelete: SetNull)
   productFile ProductFile? @relation(fields: [productFileId], references: [id], onDelete: SetNull)
+  letter      CoverLetter? @relation(fields: [letterId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([kind, createdAt])
@@ -680,6 +691,10 @@ model SiteSettings {
   siteName        String   @default("Emprego Fácil MZ")
   whatsappNumber  String? // formato internacional sem "+", ex.: 258840000000
   whatsappMessage String?
+  // Modelos de mensagem WhatsApp dos utilizadores: indicativo usado quando o número
+  // não o tem, e se o botão «Abrir WhatsApp» está disponível.
+  whatsappCountryCode  String  @default("258")
+  whatsappLinksEnabled Boolean @default(true)
   contactEmail    String?
   contactPhone    String?
   facebookUrl     String?
@@ -705,6 +720,7 @@ model PaymentSettings {
   currency          String   @default("MZN")
   defaultPriceMinor Int      @default(19900) // preço do desbloqueio de download de um CV
   cvPaywallEnabled  Boolean  @default(true) // exigir pagamento para descarregar CVs (cada CV profissional)
+  letterPriceMinor  Int      @default(0) // preço do download (PDF/DOCX) de uma carta; 0 = gratuito
   cardEnabled       Boolean  @default(false) // só pode ser ativado com um gateway oficial configurado
   updatedAt         DateTime @updatedAt
 }

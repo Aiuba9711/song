@@ -123,8 +123,11 @@ export function linksIn(text: string): string[] {
 
 export type Ungrounded = { numbers: string[]; terms: string[]; links: string[] };
 
-/** Siglas do próprio vocabulário da aplicação (não são afirmações sobre o candidato). */
-const APP_TERMS = new Set(["cv", "ia"]);
+/**
+ * Siglas do vocabulário da aplicação e fórmulas de cortesia das cartas («Exmo.(a) Sr.(a)»,
+ * «Ref.ª») — não são afirmações sobre o candidato.
+ */
+const APP_TERMS = new Set(["cv", "ia", "sr", "sra", "srs", "exmo", "exma", "exmos", "exmas", "ref"]);
 
 /** O que existe em `output` mas não existe em nenhum texto de `sources` (escrito pelo utilizador). */
 export function findUngrounded(output: string, sources: string[]): Ungrounded {

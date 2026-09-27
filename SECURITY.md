@@ -68,6 +68,12 @@ e todas as verificações acontecem no servidor.
 - **Anti-invenção**: sugestões com números, nomes, siglas, emails ou links ausentes do texto do utilizador são descartadas; competências/conselhos exigem citação real do CV.
 - Sem escrita automática: a ação nunca altera o CV. Limites de tamanho (resumo 2000, objetivo 600, descrição 2500, vaga 8000 caracteres) e **40 pedidos/hora** por utilizador. Não se guarda o texto nem a resposta; os logs de erro não incluem conteúdo.
 
+## Cartas e mensagens
+
+- Cartas acessíveis só ao dono (`where: { id, userId }`); downloads com rate limit e registo; 402 quando a carta é paga e o pagamento não foi confirmado.
+- Links «Abrir WhatsApp»: destino fixo `https://wa.me/`, número só com dígitos (8–15, validado), texto sem caracteres invisíveis e codificado com `encodeURIComponent`; abertos com `rel="noopener noreferrer"`. O admin pode desligar o botão.
+- Texto dos utilizadores tratado sempre como texto (React escapa; o DOCX escapa XML; o PDF usa só caracteres das fontes base).
+
 ## CSRF
 
 - **Server Actions**: o Next.js compara `Origin` com `Host`/`X-Forwarded-Host` e rejeita pedidos de outra origem.

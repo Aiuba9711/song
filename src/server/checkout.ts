@@ -9,12 +9,13 @@ import { getPaymentSettings } from "@/server/payments/settings";
 
 export const MAX_OPEN_ORDERS = 5;
 
-export type CheckoutTarget = { productSlug: string } | { cvId: string };
+export type CheckoutTarget = { productSlug: string } | { cvId: string } | { letterId: string };
 
 export type ResolvedItem = {
-  kind: "PRODUCT" | "CV_UNLOCK";
+  kind: "PRODUCT" | "CV_UNLOCK" | "LETTER_UNLOCK";
   productId: string | null;
   cvId: string | null;
+  letterId: string | null;
   name: string;
   description: string;
   unitPriceMinor: number;
@@ -35,10 +36,32 @@ export async function resolveCheckoutItem(userId: string, target: CheckoutTarget
       kind: "PRODUCT",
       productId: product.id,
       cvId: null,
+      letterId: null,
       name: product.name,
       description: product.shortDescription,
       unitPriceMinor: product.priceMinor,
       currency: product.currency,
+    };
+  }
+
+  if ("letterId" in target) {
+    const [letter, settings] = await Promise.all([
+      db.coverLetter.findFirst({ where: { id: target.letterId, userId }, select: { id: true, title: true, type: true, purchasedAt: true } }),
+      getPaymentSettings(),
+    ]);
+    if (!letter) throw new PaymentError("Carta não encontrada.", "INVALID_ITEM");
+    if (settings.letterPriceMinor <= 0) throw new PaymentError("O download desta carta é gratuito.", "INVALID_ITEM");
+    if (letter.purchasedAt) throw new PaymentError("Esta carta já foi comprada.", "INVALID_ITEM");
+    return {
+      kind: "LETTER_UNLOCK",
+      productId: null,
+      cvId: null,
+      letterId: letter.id,
+      name: `${letter.type === "MOTIVACAO" ? "Carta de motivação" : "Carta de candidatura"} «${letter.title}»`,
+      description: "PDF e Word (DOCX) editável desta carta.",
+      // Preço configurável em Admin > Definições > Pagamentos.
+      unitPriceMinor: settings.letterPriceMinor,
+      currency: settings.currency,
     };
   }
 
@@ -53,6 +76,7 @@ export async function resolveCheckoutItem(userId: string, target: CheckoutTarget
     kind: "CV_UNLOCK",
     productId: null,
     cvId: cv.id,
+    letterId: null,
     name: `CV profissional «${cv.title}»${cv.template ? ` — modelo ${cv.template.name}` : ""}`,
     description: "PDF sem marca d'água e Word (DOCX) editável deste CV.",
     // Preço do modelo (definido no admin) ou valor padrão da configuração de pagamentos.
@@ -62,8 +86,12 @@ export async function resolveCheckoutItem(userId: string, target: CheckoutTarget
 }
 
 /** O utilizador já tem este item pago? */
-export async function alreadyOwns(userId: string, item: Pick<ResolvedItem, "productId" | "cvId">): Promise<boolean> {
-  const where = item.productId ? { productId: item.productId } : { cvId: item.cvId!, kind: "CV_UNLOCK" as const };
+export async function alreadyOwns(userId: string, item: Pick<ResolvedItem, "productId" | "cvId"> & { letterId?: string | null }): Promise<boolean> {
+  const where = item.productId
+    ? { productId: item.productId }
+    : item.letterId
+      ? { letterId: item.letterId, kind: "LETTER_UNLOCK" as const }
+      : { cvId: item.cvId!, kind: "CV_UNLOCK" as const };
   return !!(await db.orderItem.findFirst({ where: { ...where, order: { userId, status: "PAID" } }, select: { id: true } }));
 }
 
@@ -80,7 +108,7 @@ export async function createCheckoutOrder(userId: string, input: { target: Check
   const provider = getPaymentProvider(input.method);
   if (!(await provider.isAvailable())) throw new PaymentError("Este método de pagamento não está disponível.", "UNAVAILABLE");
 
-  const itemWhere = item.productId ? { productId: item.productId } : { cvId: item.cvId! };
+  const itemWhere = item.productId ? { productId: item.productId } : item.letterId ? { letterId: item.letterId } : { cvId: item.cvId! };
   const open = await db.order.findFirst({
     where: { userId, status: { in: ["AWAITING_PAYMENT", "PENDING_VERIFICATION"] }, items: { some: itemWhere } },
     include: { payments: { orderBy: { createdAt: "desc" }, take: 1 } },
@@ -114,7 +142,7 @@ export async function createCheckoutOrder(userId: string, input: { target: Check
           status: "AWAITING_PAYMENT",
           ...totals,
           items: {
-            create: { kind: item.kind, productId: item.productId, cvId: item.cvId, productName: item.name, unitPriceMinor: item.unitPriceMinor, quantity: 1 },
+            create: { kind: item.kind, productId: item.productId, cvId: item.cvId, letterId: item.letterId, productName: item.name, unitPriceMinor: item.unitPriceMinor, quantity: 1 },
           },
         },
         select: { id: true, number: true },
@@ -188,4 +216,21 @@ export async function getCvDownloadAccess(userId: string) {
     currency: settings.currency,
     unlocked: new Set([...items.map((i) => i.cvId!), ...purchased.map((c) => c.id)]),
   };
+}
+
+/**
+ * Pode descarregar (PDF/DOCX) esta carta? Gratuito quando o preço da carta é 0 (predefinição);
+ * caso contrário, só depois de um pedido PAID de desbloqueio desta carta.
+ */
+export async function canDownloadLetter(userId: string, letterId: string): Promise<boolean> {
+  const [letter, settings] = await Promise.all([db.coverLetter.findFirst({ where: { id: letterId, userId }, select: { purchasedAt: true } }), getPaymentSettings()]);
+  if (!letter) return false;
+  if (settings.letterPriceMinor <= 0) return true;
+  return !!letter.purchasedAt || (await alreadyOwns(userId, { productId: null, cvId: null, letterId }));
+}
+
+/** Preço de uma carta (Admin > Definições > Pagamentos); 0 = download gratuito. */
+export async function getLetterPrice() {
+  const settings = await getPaymentSettings();
+  return { priceMinor: settings.letterPriceMinor, currency: settings.currency, paid: settings.letterPriceMinor > 0 };
 }

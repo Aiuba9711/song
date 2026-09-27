@@ -66,7 +66,7 @@ export function TextAreaField({
         <div>
           <Textarea {...a} rows={rows} value={value} placeholder={placeholder} maxLength={maxLength} onChange={(e) => onChange(e.target.value)} />
           {maxLength && (
-            <p className={cn("mt-1 text-right text-xs", value.length > maxLength * 0.9 ? "text-amber-700" : "text-slate-400")} aria-live="polite">
+            <p className={cn("mt-1 text-right text-xs", value.length > maxLength * 0.9 ? "text-amber-700" : "text-slate-500")} aria-live="polite">
               {value.length}/{maxLength}
             </p>
           )}

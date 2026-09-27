@@ -20,15 +20,17 @@ import { getSiteSettings } from "@/server/settings";
 const startSchema = z.object({
   produto: z.string().trim().max(80).optional(),
   cv: z.string().trim().max(40).optional(),
+  carta: z.string().trim().max(40).optional(),
   method: z.enum(["MPESA", "EMOLA", "MKESH", "CARD"], { error: "Escolha um método de pagamento." }),
   name: nameSchema,
   email: emailSchema,
   phone: phoneSchema,
 });
 
-function targetOf(data: { produto?: string; cv?: string }): CheckoutTarget | null {
+function targetOf(data: { produto?: string; cv?: string; carta?: string }): CheckoutTarget | null {
   if (data.produto) return { productSlug: data.produto };
   if (data.cv) return { cvId: data.cv };
+  if (data.carta) return { letterId: data.carta };
   return null;
 }
 

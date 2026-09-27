@@ -18,6 +18,7 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
   if (order.status !== "PAID") redirect(`/checkout/pending?pedido=${encodeURIComponent(order.number)}`);
 
   const cvItem = order.items.find((i) => i.kind === "CV_UNLOCK" && i.cvId);
+  const letterItem = order.items.find((i) => i.kind === "LETTER_UNLOCK" && i.letterId);
   return (
     <div className="text-center">
       <div className="mx-auto grid size-16 place-items-center rounded-full bg-go-50 text-go-700">
@@ -36,7 +37,11 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
         </ul>
         <p className="mt-2 font-semibold">{formatMoney(order.totalMinor, order.currency)}</p>
       </Card>
-      {cvItem ? (
+      {letterItem ? (
+        <ButtonLink href={`/meu-espaco/cartas/${letterItem.letterId}/editar`} size="lg" variant="success" className="mt-6 w-full max-w-md" icon={<Download className="size-5" aria-hidden />}>
+          Descarregar a minha carta
+        </ButtonLink>
+      ) : cvItem ? (
         <ButtonLink href={`/meu-espaco/cvs/${cvItem.cvId}`} size="lg" variant="success" className="mt-6 w-full max-w-md" icon={<Download className="size-5" aria-hidden />}>
           Descarregar o meu CV
         </ButtonLink>

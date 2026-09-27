@@ -322,3 +322,17 @@ editor (cliente)                  servidor                                      
   verificação da resposta apanha o que um provedor «enganado» devolva.
 - **Sem alterações automáticas**: a ação devolve só a sugestão; o CV muda apenas quando o utilizador
   clica «Aplicar sugestão» (e depois guarda). A descrição da vaga fica só no `sessionStorage`.
+
+## Documentos de candidatura
+
+- **Cartas** (`src/letters/`): `generateLetter()` monta assunto e corpo por regras, só com os dados do
+  utilizador e as fórmulas de cortesia habituais (campos vazios não aparecem). `letterLayout()` é a
+  estrutura única usada pela pré-visualização HTML, pelo PDF (`@react-pdf/renderer`, texto convertido
+  para WinAnsi por `toWinAnsi`) e pelo DOCX (`docx`), e por «Copiar carta» (`letterPlainText`).
+  Páginas: `/meu-espaco/cartas` e `/meu-espaco/cartas/[id]/editar`; downloads em `/api/cartas/[id]/{pdf,docx}`.
+- **Email e WhatsApp** (`src/letters/messages.ts`): modelos por categoria; o texto acompanha os dados
+  até o utilizador o editar («Repor texto do modelo» volta ao modelo). Página `/meu-espaco/mensagens`.
+- **Links WhatsApp** (`src/lib/whatsapp.ts`): base fixa `https://wa.me/`, número reduzido a dígitos e
+  validado (8–15 dígitos, indicativo do admin quando falta), texto limpo e codificado.
+- **IA**: os mesmos `AiImprove`/`runAiTask` do CV, com os campos `letter_body`, `email_body` e
+  `whatsapp_message`; os dados do formulário vão em `context.facts` e são a única prova aceite.

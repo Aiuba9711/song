@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, FilePlus2, FileText, Package, Sparkles } from "lucide-react";
+import { ArrowRight, FilePlus2, FileText, Mail, MessageSquareText, Package, Sparkles } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -33,7 +33,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <p className="mt-1 text-slate-600">O que quer fazer hoje?</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link href="/meu-espaco/cvs/novo" className="group">
           <Card className="flex h-full items-center gap-4 bg-brand-700 p-5 text-white transition-colors group-hover:bg-brand-800">
             <FilePlus2 className="size-8 shrink-0" aria-hidden />
@@ -49,6 +49,24 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <div>
               <p className="font-semibold">Meus CVs</p>
               <p className="text-sm text-slate-600">{cvs.length === 1 ? "1 CV" : `${cvs.length} CVs`}</p>
+            </div>
+          </Card>
+        </Link>
+        <Link href="/meu-espaco/cartas" className="group">
+          <Card className="flex h-full items-center gap-4 p-5 transition-shadow group-hover:shadow-lift">
+            <Mail className="size-8 shrink-0 text-brand-700" aria-hidden />
+            <div>
+              <p className="font-semibold">Cartas</p>
+              <p className="text-sm text-slate-600">Candidatura e motivação</p>
+            </div>
+          </Card>
+        </Link>
+        <Link href="/meu-espaco/mensagens" className="group">
+          <Card className="flex h-full items-center gap-4 p-5 transition-shadow group-hover:shadow-lift">
+            <MessageSquareText className="size-8 shrink-0 text-brand-700" aria-hidden />
+            <div>
+              <p className="font-semibold">Email e WhatsApp</p>
+              <p className="text-sm text-slate-600">Modelos prontos a copiar</p>
             </div>
           </Card>
         </Link>

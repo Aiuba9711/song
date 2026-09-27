@@ -6,6 +6,9 @@ export type PublicSettings = {
   siteName: string;
   whatsappNumber: string | null;
   whatsappMessage: string | null;
+  /** Indicativo usado nos links «Abrir WhatsApp» quando o número não o tem */
+  whatsappCountryCode: string;
+  whatsappLinksEnabled: boolean;
   contactEmail: string | null;
   contactPhone: string | null;
   facebookUrl: string | null;
@@ -21,6 +24,8 @@ const EMPTY: PublicSettings = {
   siteName: "Emprego Fácil MZ",
   whatsappNumber: null,
   whatsappMessage: null,
+  whatsappCountryCode: "258",
+  whatsappLinksEnabled: true,
   contactEmail: null,
   contactPhone: null,
   facebookUrl: null,
@@ -48,7 +53,7 @@ export const getSiteSettings = unstable_cache(
       return EMPTY;
     }
   },
-  ["site-settings-v1"],
+  ["site-settings-v2"],
   { tags: [SETTINGS_TAG], revalidate: 3600 },
 );
 

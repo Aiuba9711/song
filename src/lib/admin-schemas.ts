@@ -130,6 +130,19 @@ export const settingsSchema = z.object({
       return digits.length === 9 && digits.startsWith("8") ? `258${digits}` : digits;
     }),
   whatsappMessage: optionalText(300),
+  whatsappCountryCode: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v, ctx) => {
+      if (!v) return "258";
+      if (!/^\+?\d{1,4}$/.test(v)) {
+        ctx.addIssue({ code: "custom", message: "Indicativo inválido. Ex.: 258" });
+        return z.NEVER;
+      }
+      return v.replace(/\D/g, "");
+    }),
+  whatsappLinksEnabled: z.literal("on").optional().transform((v) => v === "on"),
   contactEmail: z
     .string()
     .trim()
@@ -190,6 +203,8 @@ export const paymentSettingsSchema = z
     currency: z.enum(["MZN", "ZAR", "USD", "BRL", "EUR"]),
     defaultPrice: money("valor padrão", true),
     cvPaywallEnabled: checkbox,
+    /** Vazio ou 0 = download de cartas gratuito */
+    letterPrice: money("preço da carta", false),
   })
   .superRefine((d, ctx) => {
     for (const [flag, num, label] of [

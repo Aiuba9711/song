@@ -11,12 +11,17 @@ export const AI_LIMITS = {
   summary: 2000,
   objective: 600,
   experience_description: 2500,
+  letter_body: 6000,
+  email_body: 3000,
+  whatsapp_message: 1000,
+  /** Dados do formulário (carta/mensagem) usados como contexto e como prova */
+  facts: 4000,
   jobDescription: 8000,
   /** Texto total do CV enviado como contexto (sugestões de competências / análise da vaga) */
   cvSources: 12000,
 } as const;
 
-export const REWRITE_FIELDS = ["summary", "objective", "experience_description"] as const;
+export const REWRITE_FIELDS = ["summary", "objective", "experience_description", "letter_body", "email_body", "whatsapp_message"] as const;
 export type RewriteField = (typeof REWRITE_FIELDS)[number];
 
 export const REWRITE_MODES = ["improve", "correct", "shorten", "objective"] as const;
@@ -33,6 +38,9 @@ export const FIELD_LABELS: Record<RewriteField, string> = {
   summary: "Perfil profissional",
   objective: "Objetivo profissional",
   experience_description: "Descrição de funções",
+  letter_body: "Texto da carta",
+  email_body: "Texto do email",
+  whatsapp_message: "Mensagem de WhatsApp",
 };
 
 const trimmed = (max: number) => z.string().max(max, `Texto demasiado longo (máximo ${max} caracteres).`);
@@ -48,7 +56,14 @@ export const aiRequestSchema = z.discriminatedUnion("task", [
     mode: z.enum(REWRITE_MODES).default("improve"),
     text: z.string(),
     /** Cargo pretendido / cargo desta experiência — só contexto */
-    context: z.object({ jobTitle: trimmed(120).default(""), position: trimmed(120).default("") }).default({ jobTitle: "", position: "" }),
+    context: z
+      .object({
+        jobTitle: trimmed(120).default(""),
+        position: trimmed(120).default(""),
+        /** Dados escritos pelo utilizador no formulário (carta, email, WhatsApp) */
+        facts: trimmed(AI_LIMITS.facts).default(""),
+      })
+      .default({ jobTitle: "", position: "", facts: "" }),
     /** Opcional: adaptar o texto à vaga (só resumo e objetivo) */
     jobDescription: trimmed(AI_LIMITS.jobDescription).default(""),
   }),
