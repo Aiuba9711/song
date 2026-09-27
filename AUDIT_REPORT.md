@@ -13,7 +13,7 @@ Classificação: **CRÍTICO** (bloqueia produção / perda de dados ou dinheiro)
 | `npm audit` | 6 vulnerabilidades → **2** (moderadas, só na ferramenta de testes; ver 3) |
 | Build (`npm run build`) | ✅ |
 | Testes unitários e de integração (Vitest) | ✅ 376 (31 ficheiros) |
-| Testes E2E (Playwright, computador + Android) | ver secção final |
+| Testes E2E (Playwright, computador + Android) | ✅ 54 passaram, 4 ignorados (admin só no computador) |
 | Esquema ↔ migrações (drift) | ✅ sem diferenças; nenhuma migração destrutiva |
 | Problemas CRÍTICOS encontrados | **nenhum** no código |
 
@@ -114,4 +114,20 @@ Resend) — o novo comando `npm run check:prod` verifica essa configuração.
 
 ## 5. Resultado final dos testes
 
-Ver o fim deste ficheiro (atualizado após a execução completa).
+| Verificação | Resultado |
+|---|---|
+| `npx tsc --noEmit` | ✅ 0 erros |
+| `npx eslint . --max-warnings=0` | ✅ 0 erros / 0 avisos |
+| `npm run build` | ✅ build de produção concluído (40 páginas de modelos pré-renderizadas) |
+| `npm test` (Vitest: unitários + integração) | ✅ **376 passaram** (31 ficheiros) |
+| `npm run test:e2e` (Playwright: computador + Android) | ✅ **54 passaram**, 0 falharam, 4 ignorados (fluxos de admin testados só no computador) |
+| `npm audit` | 2 moderadas (vitest, só ferramenta de testes — ver secção 3) |
+| Drift esquema ↔ migrações | ✅ nenhum |
+
+Nota: uma primeira execução E2E teve 10 falhas porque os testes de integração foram corridos **ao mesmo
+tempo** e limparam a base de testes partilhada (`emprego_test`) — não era um erro da aplicação. Corrida
+de novo isoladamente: tudo passou. O README avisa agora para não correr as duas suítes em simultâneo.
+
+**Conclusão:** o build funciona e todos os testes críticos passam. A aplicação pode ir para produção
+assim que estiverem configurados PostgreSQL gerido, armazenamento S3 privado e email Resend
+(`npm run check:prod` sem erros).
