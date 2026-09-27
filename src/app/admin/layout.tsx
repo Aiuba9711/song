@@ -6,6 +6,7 @@ import { Logo } from "@/components/layout/logo";
 import { Badge } from "@/components/ui/card";
 import { requirePermission } from "@/lib/auth/guards";
 import { can, ROLE_LABELS } from "@/lib/auth/roles";
+import { countPendingVerification } from "@/server/payments/review";
 
 export const metadata: Metadata = { title: { default: "Administração", template: "%s | Admin" }, robots: { index: false, follow: false } };
 
@@ -14,6 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const items: AdminNavItem[] = [
     { href: "/admin", label: "Dashboard", icon: "dashboard" },
     ...(can(user.role, "products.manage") ? [{ href: "/admin/produtos", label: "Produtos", icon: "products" } as const] : []),
+    ...(can(user.role, "payments.verify") ? [{ href: "/admin/pedidos/pendentes", label: "Pagamentos pendentes", icon: "payments", count: await countPendingVerification() } as const] : []),
     ...(can(user.role, "orders.view") ? [{ href: "/admin/pedidos", label: "Pedidos", icon: "orders" } as const] : []),
     ...(can(user.role, "users.manage") ? [{ href: "/admin/utilizadores", label: "Utilizadores", icon: "users" } as const] : []),
     ...(can(user.role, "templates.manage") ? [{ href: "/admin/modelos", label: "Modelos de CV", icon: "templates" } as const] : []),

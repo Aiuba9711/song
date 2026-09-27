@@ -145,3 +145,54 @@ export const settingsSchema = z.object({
   tiktokUrl: url,
   linkedinUrl: url,
 });
+
+/** Prefixos por operador (Moçambique): Vodacom 84/85, Movitel 86/87, Tmcel 82/83. */
+const OPERATOR_PREFIXES = { mpesa: ["84", "85"], emola: ["86", "87"], mkesh: ["82", "83"] } as const;
+
+function walletNumber(operator: keyof typeof OPERATOR_PREFIXES, label: string) {
+  return z
+    .string()
+    .trim()
+    .max(20)
+    .optional()
+    .transform((v, ctx) => {
+      if (!v) return null;
+      const digits = v.replace(/\D/g, "").replace(/^258(?=\d{9}$)/, "");
+      if (!/^8\d{8}$/.test(digits)) {
+        ctx.addIssue({ code: "custom", message: `Número ${label} inválido. Use 9 dígitos, ex.: 84 123 4567` });
+        return z.NEVER;
+      }
+      if (!(OPERATOR_PREFIXES[operator] as readonly string[]).includes(digits.slice(0, 2))) {
+        ctx.addIssue({ code: "custom", message: `Números ${label} começam por ${OPERATOR_PREFIXES[operator].join(" ou ")}.` });
+        return z.NEVER;
+      }
+      return digits;
+    });
+}
+
+const checkbox = z.literal("on").optional().transform((v) => v === "on");
+
+export const paymentSettingsSchema = z
+  .object({
+    mpesaEnabled: checkbox,
+    mpesaNumber: walletNumber("mpesa", "M-Pesa"),
+    emolaEnabled: checkbox,
+    emolaNumber: walletNumber("emola", "e-Mola"),
+    mkeshEnabled: checkbox,
+    mkeshNumber: walletNumber("mkesh", "mKesh"),
+    accountHolderName: optionalText(80),
+    instructions: z.string().trim().max(2000).default(""),
+    currency: z.enum(["MZN", "ZAR", "USD", "BRL", "EUR"]),
+    defaultPrice: money("valor padrão", true),
+    cvPaywallEnabled: checkbox,
+  })
+  .superRefine((d, ctx) => {
+    for (const [flag, num, label] of [
+      ["mpesaEnabled", "mpesaNumber", "M-Pesa"],
+      ["emolaEnabled", "emolaNumber", "e-Mola"],
+      ["mkeshEnabled", "mkeshNumber", "mKesh"],
+    ] as const) {
+      if (d[flag] && !d[num]) ctx.addIssue({ code: "custom", path: [num], message: `Indique o número ${label} para ativar este método.` });
+    }
+    if (d.defaultPrice !== null && d.defaultPrice <= 0) ctx.addIssue({ code: "custom", path: ["defaultPrice"], message: "O valor padrão deve ser maior que zero." });
+  });

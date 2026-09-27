@@ -13,6 +13,7 @@ import { appUrl } from "@/lib/env";
 import { formatMoney } from "@/lib/money";
 import { formatBytes } from "@/lib/utils";
 import { getActiveProduct, listActiveProducts, parseFaq } from "@/server/catalog";
+import { getPublicPaymentSummary } from "@/server/payments/settings";
 import { getSiteSettings, whatsappLink } from "@/server/settings";
 import { claimFreeProductAction } from "../actions";
 
@@ -38,7 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
-  const [product, settings] = await Promise.all([getActiveProduct(slug), getSiteSettings()]);
+  const [product, settings, payments] = await Promise.all([getActiveProduct(slug), getSiteSettings(), getPublicPaymentSummary()]);
   if (!product) notFound();
 
   const free = product.priceMinor === 0;
@@ -155,13 +156,24 @@ export default async function ProductPage({ params }: Props) {
               </form>
             ) : (
               <div className="mt-5 space-y-3">
-                <button type="button" disabled className={buttonClass("primary", "lg", "w-full")} aria-describedby="pagamentos-info">
-                  Comprar
-                </button>
-                <p id="pagamentos-info" className="text-sm text-slate-600">
-                  O pagamento online (M-Pesa, e-Mola, mKesh e cartão) estará disponível brevemente.
-                  {settings.whatsappNumber && " Para comprar já, fale connosco no WhatsApp."}
-                </p>
+                {payments.checkoutAvailable && product.currency === "MZN" ? (
+                  <>
+                    <Link href={`/checkout?produto=${product.slug}`} prefetch={false} className={buttonClass("primary", "lg", "w-full")}>
+                      Comprar
+                    </Link>
+                    <p className="text-sm text-slate-600">Pague por M-Pesa, e-Mola ou mKesh. O acesso é libertado depois da confirmação do pagamento.</p>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" disabled className={buttonClass("primary", "lg", "w-full")} aria-describedby="pagamentos-info">
+                      Comprar
+                    </button>
+                    <p id="pagamentos-info" className="text-sm text-slate-600">
+                      Os pagamentos estão temporariamente indisponíveis.
+                      {settings.whatsappNumber && " Para comprar já, fale connosco no WhatsApp."}
+                    </p>
+                  </>
+                )}
                 {settings.whatsappNumber && (
                   <a
                     href={whatsappLink(settings.whatsappNumber, orderMessage)}

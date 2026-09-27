@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, CloudOff, Download, Eye, Save, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CloudOff, Download, Eye, Lock, Save, X } from "lucide-react";
 import { saveCvAction } from "@/app/meu-espaco/cvs/actions";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonClass } from "@/components/ui/button";
@@ -78,9 +78,11 @@ type Props = {
   updatedAt: string;
   templates: BuilderTemplate[];
   initialPhotoUrl: string | null;
+  /** Download pago ainda não desbloqueado para este CV (null = download livre) */
+  downloadLock?: { priceLabel: string } | null;
 };
 
-export function CvBuilder({ cvId, initial, initialStep, updatedAt, templates, initialPhotoUrl }: Props) {
+export function CvBuilder({ cvId, initial, initialStep, updatedAt, templates, initialPhotoUrl, downloadLock }: Props) {
   const [cv, setCv] = useState<CvContent>(initial);
   const [step, setStep] = useState(Math.min(Math.max(initialStep, 1), 10));
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -301,14 +303,32 @@ export function CvBuilder({ cvId, initial, initialStep, updatedAt, templates, in
                   <CvPreview cv={cv} theme={theme} photoUrl={photoUrl} />
                 </ScaledSheet>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Button size="lg" onClick={() => download("pdf")} icon={<Download className="size-5" aria-hidden />}>
-                  Baixar PDF
-                </Button>
-                <Button size="lg" variant="outline" onClick={() => download("docx")} icon={<Download className="size-5" aria-hidden />}>
-                  Baixar Word
-                </Button>
-              </div>
+              {downloadLock ? (
+                <div className="rounded-2xl border border-go-100 bg-go-50 p-4">
+                  <p className="text-sm text-slate-700">O download em PDF e Word fica disponível depois do pagamento confirmado.</p>
+                  <Button
+                    size="lg"
+                    variant="success"
+                    className="mt-3 w-full"
+                    icon={<Lock className="size-5" aria-hidden />}
+                    onClick={async () => {
+                      if (dirty && (await save(10)) !== "ok") return;
+                      router.push(`/checkout?cv=${cvId}`);
+                    }}
+                  >
+                    Desbloquear download · {downloadLock.priceLabel}
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Button size="lg" onClick={() => download("pdf")} icon={<Download className="size-5" aria-hidden />}>
+                    Baixar PDF
+                  </Button>
+                  <Button size="lg" variant="outline" onClick={() => download("docx")} icon={<Download className="size-5" aria-hidden />}>
+                    Baixar Word
+                  </Button>
+                </div>
+              )}
               <SectionVisibility cv={cv} set={set} />
               <Link href={`/meu-espaco/cvs/${cvId}`} className={buttonClass("ghost", "md", "w-full")} onClick={(e) => {
                   if (!dirty) return;

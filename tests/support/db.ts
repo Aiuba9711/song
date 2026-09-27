@@ -53,3 +53,24 @@ export async function createProduct(overrides: Partial<{ priceMinor: number; sta
     },
   });
 }
+
+/** Configuração de pagamentos de TESTE (números fictícios, nunca os reais). */
+export async function createPaymentSettings(overrides: Partial<{ cvPaywallEnabled: boolean; mpesaEnabled: boolean; emolaEnabled: boolean; mkeshEnabled: boolean; defaultPriceMinor: number; currency: string }> = {}) {
+  return db.paymentSettings.upsert({
+    where: { id: "default" },
+    update: overrides,
+    create: {
+      id: "default",
+      mpesaEnabled: true,
+      mpesaNumber: "840000001",
+      emolaEnabled: true,
+      emolaNumber: "860000002",
+      mkeshEnabled: false,
+      mkeshNumber: "820000003",
+      instructions: "Passo 1\nPasso 2",
+      currency: "MZN",
+      defaultPriceMinor: 19900,
+      ...overrides,
+    },
+  });
+}

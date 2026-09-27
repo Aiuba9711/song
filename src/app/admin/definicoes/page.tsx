@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requirePermission } from "@/lib/auth/guards";
 import { readSettings } from "@/server/settings";
 import { SettingsForm } from "./settings-form";
+import { SettingsTabs } from "./tabs";
 
 export const metadata: Metadata = { title: "Definições" };
 
@@ -11,7 +12,8 @@ export default async function AdminSettingsPage() {
   const s = await readSettings();
   return (
     <>
-      <PageHeader title="Definições do site" description="Contactos e redes sociais apresentados no site. Nada disto está no código." />
+      <PageHeader title="Definições" description="Configuração do site. Nada disto está no código." />
+      <SettingsTabs current="site" />
       <SettingsForm
         defaults={{
           whatsappNumber: s.whatsappNumber ?? "",

@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { CvBuilder, type BuilderTemplate } from "@/cv/builder/cv-builder";
 import { requireUser } from "@/lib/auth/guards";
 import { CATEGORY_LABELS, listActiveTemplates } from "@/server/catalog";
+import { formatMoney } from "@/lib/money";
+import { getCvDownloadAccess } from "@/server/checkout";
 import { getUserCv, toCvContent } from "@/server/cv";
 
 export const metadata: Metadata = { title: "Editar CV" };
@@ -10,7 +12,7 @@ export const metadata: Metadata = { title: "Editar CV" };
 export default async function EditCvPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ passo?: string }> }) {
   const [{ id }, { passo }] = await Promise.all([params, searchParams]);
   const user = await requireUser(`/meu-espaco/cvs/${id}/editar`);
-  const [cv, templates] = await Promise.all([getUserCv(user.id, id), listActiveTemplates()]);
+  const [cv, templates, access] = await Promise.all([getUserCv(user.id, id), listActiveTemplates(), getCvDownloadAccess(user.id)]);
   if (!cv) notFound();
 
   const builderTemplates: BuilderTemplate[] = templates.map((t) => ({
@@ -34,6 +36,7 @@ export default async function EditCvPage({ params, searchParams }: { params: Pro
       updatedAt={cv.updatedAt.toISOString()}
       templates={builderTemplates}
       initialPhotoUrl={cv.photoKey ? `/api/cv/${cv.id}/photo?v=${cv.updatedAt.getTime()}` : null}
+      downloadLock={access.paywall && !access.unlocked.has(cv.id) ? { priceLabel: formatMoney(access.priceMinor, access.currency) } : null}
     />
   );
 }

@@ -56,3 +56,43 @@ export function orderDeliveredEmail(
   );
   return { to, subject, text, html };
 }
+
+export function paymentSubmittedEmail(to: string, name: string, orderNumber: string, url: string): EmailMessage {
+  const subject = `Pedido ${orderNumber} — pagamento em verificação`;
+  const text = `Olá ${name},\n\nRecebemos os dados do pagamento do pedido ${orderNumber}. A nossa equipa vai verificar a transação e, assim que for confirmada, o acesso é libertado.\n\nAcompanhe o estado em:\n${url}`;
+  const html = layout(
+    "Pagamento em verificação",
+    `<p>Olá ${escapeHtml(name)},</p><p>Recebemos os dados do pagamento do pedido <strong>${escapeHtml(orderNumber)}</strong>. A nossa equipa vai verificar a transação e, assim que for confirmada, o acesso é libertado.</p>${button(url, "Ver estado do pedido")}`,
+  );
+  return { to, subject, text, html };
+}
+
+export function paymentRejectedEmail(to: string, name: string, orderNumber: string, reason: string, url: string): EmailMessage {
+  const subject = `Pedido ${orderNumber} — pagamento não confirmado`;
+  const text = `Olá ${name},\n\nNão foi possível confirmar o pagamento do pedido ${orderNumber}.\nMotivo: ${reason}\n\nSe acha que se trata de um erro, contacte-nos. Pode fazer um novo pedido em:\n${url}`;
+  const html = layout(
+    "Pagamento não confirmado",
+    `<p>Olá ${escapeHtml(name)},</p><p>Não foi possível confirmar o pagamento do pedido <strong>${escapeHtml(orderNumber)}</strong>.</p><p><strong>Motivo:</strong> ${escapeHtml(reason)}</p><p>Se acha que se trata de um erro, contacte-nos.</p>${button(url, "Ver pedido")}`,
+  );
+  return { to, subject, text, html };
+}
+
+export function proofRequestedEmail(to: string, name: string, orderNumber: string, note: string, url: string): EmailMessage {
+  const subject = `Pedido ${orderNumber} — envie um novo comprovativo`;
+  const text = `Olá ${name},\n\nPrecisamos de mais informação para confirmar o pagamento do pedido ${orderNumber}:\n${note}\n\nEnvie os dados novamente em:\n${url}`;
+  const html = layout(
+    "Precisamos de um novo comprovativo",
+    `<p>Olá ${escapeHtml(name)},</p><p>Precisamos de mais informação para confirmar o pagamento do pedido <strong>${escapeHtml(orderNumber)}</strong>:</p><p style="background:#fffbeb;border-radius:8px;padding:12px">${escapeHtml(note)}</p>${button(url, "Enviar novamente")}`,
+  );
+  return { to, subject, text, html };
+}
+
+export function adminPaymentPendingEmail(to: string, orderNumber: string, customer: string, amount: string, method: string, url: string): EmailMessage {
+  const subject = `[Admin] Pagamento para verificar — ${orderNumber}`;
+  const text = `Novo pagamento manual para verificar.\n\nPedido: ${orderNumber}\nCliente: ${customer}\nValor: ${amount}\nMétodo: ${method}\n\nVerifique a transação no extrato do operador antes de confirmar:\n${url}`;
+  const html = layout(
+    "Pagamento para verificar",
+    `<p>Pedido <strong>${escapeHtml(orderNumber)}</strong></p><ul><li>Cliente: ${escapeHtml(customer)}</li><li>Valor: ${escapeHtml(amount)}</li><li>Método: ${escapeHtml(method)}</li></ul><p>Verifique a transação no extrato do operador antes de confirmar.</p>${button(url, "Abrir pagamentos pendentes")}`,
+  );
+  return { to, subject, text, html };
+}

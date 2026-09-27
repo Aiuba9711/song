@@ -53,6 +53,7 @@ model User {
   affiliate      Affiliate?
   blogPosts      BlogPost[]
   auditLogs      AuditLog[]
+  paymentReviews Payment[]            @relation("PaymentReviews")
 
   @@index([createdAt])
 }
@@ -180,6 +181,7 @@ model CV {
   references     CVReference[]
   customSections CVCustomSection[]
   downloads      Download[]
+  orderItems     OrderItem[]
 
   @@index([userId, updatedAt])
 }
@@ -401,7 +403,8 @@ model ProductFile {
 
 enum OrderStatus {
   PENDING
-  AWAITING_PAYMENT
+  AWAITING_PAYMENT // pedido criado; o cliente ainda não enviou os dados do pagamento
+  PENDING_VERIFICATION // o cliente informou a transação; aguarda verificação do administrador
   PAID
   FAILED
   CANCELLED
@@ -423,6 +426,7 @@ model Order {
   couponId      String?
   affiliateId   String?
   paidAt        DateTime?
+  cancelledAt   DateTime?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -437,19 +441,28 @@ model Order {
   @@index([customerEmail])
 }
 
+enum OrderItemKind {
+  PRODUCT // kit/produto digital
+  CV_UNLOCK // desbloqueio do download de um CV do utilizador
+}
+
 model OrderItem {
-  id             String  @id @default(cuid())
+  id             String        @id @default(cuid())
   orderId        String
+  kind           OrderItemKind @default(PRODUCT)
   productId      String?
+  cvId           String?
   productName    String // cópia no momento da compra
   unitPriceMinor Int
-  quantity       Int     @default(1)
+  quantity       Int           @default(1)
 
   order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  cv      CV?      @relation(fields: [cvId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
   @@index([productId])
+  @@index([cvId])
 }
 
 enum PaymentProviderId {
@@ -461,9 +474,17 @@ enum PaymentProviderId {
   CARD
 }
 
+enum PaymentMode {
+  MANUAL // transferência para número de carteira móvel, verificada por um administrador
+  API // integração oficial com o fornecedor (futuro)
+}
+
 enum PaymentStatus {
-  PENDING
+  PENDING // aguarda que o cliente pague e informe a transação
+  PENDING_VERIFICATION // cliente informou a transação; aguarda o administrador
+  RESUBMISSION_REQUESTED // administrador pediu novo comprovativo
   SUCCEEDED
+  REJECTED // administrador rejeitou (ex.: transação não encontrada)
   FAILED
   CANCELLED
   REFUNDED
@@ -473,20 +494,35 @@ model Payment {
   id                String            @id @default(cuid())
   orderId           String
   provider          PaymentProviderId
+  mode              PaymentMode       @default(API)
   status            PaymentStatus     @default(PENDING)
   amountMinor       Int
   currency          String            @default("MZN")
-  providerReference String? // referência devolvida pelo gateway
-  payerPhone        String?
+  providerReference String? // referência devolvida por um gateway oficial (modo API)
   failureReason     String?
   metadata          Json? // resposta do gateway SEM segredos
+  // ── Pagamento manual ─────────────────────────────────────
+  payeeNumber       String? // número de destino apresentado ao cliente (cópia para auditoria)
+  payerName         String? // nome do titular informado pelo cliente
+  payerPhone        String? // número usado para pagar, informado pelo cliente
+  transactionId     String? // código da transação (SMS do operador), informado pelo cliente
+  reportedPaidAt    DateTime? // data/hora aproximada informada pelo cliente
+  proofKey          String? // comprovativo (armazenamento privado)
+  proofMime         String?
+  submittedAt       DateTime?
+  reviewedAt        DateTime?
+  reviewedById      String?
+  reviewNote        String? // motivo da rejeição / pedido de novo comprovativo
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order      Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("PaymentReviews", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@unique([provider, providerReference])
   @@index([orderId])
+  @@index([status, submittedAt])
+  @@index([provider, transactionId])
 }
 
 model Coupon {
@@ -616,6 +652,25 @@ model SiteSettings {
   linkedinUrl     String?
   supportHours    String?
   updatedAt       DateTime @updatedAt
+}
+
+// Configuração central de pagamentos (linha única "default"), editável em
+// Admin > Definições > Pagamentos. Os números de pagamento NÃO estão no código.
+model PaymentSettings {
+  id                String   @id @default("default")
+  mpesaEnabled      Boolean  @default(false)
+  mpesaNumber       String? // número nacional, ex.: 84XXXXXXX
+  emolaEnabled      Boolean  @default(false)
+  emolaNumber       String?
+  mkeshEnabled      Boolean  @default(false)
+  mkeshNumber       String?
+  accountHolderName String? // nome do titular apresentado ao cliente (opcional)
+  instructions      String   @default("")
+  currency          String   @default("MZN")
+  defaultPriceMinor Int      @default(19900) // preço do desbloqueio de download de um CV
+  cvPaywallEnabled  Boolean  @default(false) // exigir pagamento para descarregar CVs
+  cardEnabled       Boolean  @default(false) // só pode ser ativado com um gateway oficial configurado
+  updatedAt         DateTime @updatedAt
 }
 
 model AuditLog {

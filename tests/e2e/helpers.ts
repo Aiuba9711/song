@@ -22,6 +22,7 @@ export async function login(page: Page, email: string, password: string) {
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Senha", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Entrar" }).click();
+  await page.waitForURL((url) => !url.pathname.startsWith("/entrar"));
 }
 
 /** Garante que a página não tem scroll horizontal (layout mobile correto). */

@@ -13,7 +13,7 @@ Pensada para smartphones Android e internet limitada.
 
 ---
 
-## Estado atual — Fase 1 (MVP) ✅
+## Estado atual — Fase 1 (MVP) ✅ · Fase 2: pagamentos manuais ✅
 
 | Funcionalidade | Estado |
 |---|---|
@@ -27,10 +27,16 @@ Pensada para smartphones Android e internet limitada.
 | Modelo gratuito (CV + carta em Word) com fluxo pedido → entrega | ✅ |
 | Painel admin: dashboard, produtos/preços/ficheiros, modelos, utilizadores, pedidos, definições, auditoria | ✅ |
 | PWA (manifest, service worker, offline, instalação), SEO básico, botão WhatsApp configurável | ✅ |
-| Pagamentos (M-Pesa, e-Mola, mKesh, cartão), cartas, emails, cupões | ⏳ Fase 2 |
+| Checkout mobile-first com pagamento **manual** M-Pesa / e-Mola / mKesh (`/checkout`, `/pending`, `/success`, `/failed`) | ✅ |
+| Admin: Definições → Pagamentos (números, instruções, moeda, valor padrão, métodos ativos) | ✅ |
+| Admin: Pagamentos pendentes (confirmar, rejeitar, pedir novo comprovativo) com auditoria | ✅ |
+| Download pago de CVs (opcional, desligado por omissão) | ✅ |
+| Cartão bancário | ⏳ placeholder — requer gateway oficial |
+| Integração por API com operadores, cartas, modelos de email/WhatsApp, cupões | ⏳ Fase 2 (restante) |
 
-O botão **Comprar** dos kits pagos está desativado até existir um fornecedor de pagamentos real;
-enquanto isso, a página oferece "Encomendar pelo WhatsApp" (se o número estiver configurado).
+O pagamento é manual: o cliente transfere para o número configurado no admin e informa a
+transação; **só um administrador pode confirmar** e só então o produto é libertado.
+Detalhes em [PAYMENTS.md](./PAYMENTS.md).
 
 ---
 
@@ -80,10 +86,11 @@ Todas estão documentadas em [`.env.example`](./.env.example). Resumo:
 | `EMAIL_DRIVER` | não | `console` (dev) ou `resend` |
 | `EMAIL_FROM`, `RESEND_API_KEY` | se `resend` | Envio de emails |
 | `RATE_LIMIT_SCALE` | não | Multiplicador de limites (manter `1` em produção) |
+| `SEED_MPESA_NUMBER`, `SEED_EMOLA_NUMBER`, `SEED_MKESH_NUMBER` | não | Só usados pelo seed para criar a configuração de pagamentos inicial |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | só no `admin:create` | Remover do ambiente depois de criar a conta |
 
-Preços, número de WhatsApp e redes sociais **não** são variáveis de ambiente nem estão no código:
-são geridos no painel `/admin`.
+Preços, números de pagamento, número de WhatsApp e redes sociais **não** estão no código:
+são geridos no painel `/admin` (os `SEED_*` servem apenas para a configuração inicial).
 
 ## Scripts
 
@@ -106,7 +113,7 @@ Os testes de integração e e2e usam uma base de dados **separada** (o nome tem 
 ```bash
 createdb emprego_test                 # uma vez
 # .env.test (versionado, sem segredos) aponta para emprego_test e ./storage-test
-npm test                              # 124 testes: auth, CV, PDF, DOCX, pedidos, downloads, permissões…
+npm test                              # 159 testes: auth, CV, PDF, DOCX, pedidos, pagamentos, downloads, permissões…
 npx playwright install chromium       # uma vez (ou CHROMIUM_PATH=/caminho/para/chrome)
 npm run test:e2e                      # prepara a BD de teste, faz build e testa em desktop e Pixel 7
 ```
@@ -118,7 +125,8 @@ Cobertura principal:
 - **PDF / DOCX**: os 3 layouts geram ficheiros válidos (A4, margens, estilos, marcadores, acentos, fotografia opcional), CVs vazios não inventam conteúdo.
 - **Pedidos e downloads**: produto gratuito → pedido pago de 0 MT → entrega; só quem tem pedido pago descarrega.
 - **Permissões**: USER/EDITOR/ADMIN nas ações administrativas; auditoria das alterações de preço.
-- **E2E (desktop + Android)**: jornada completa (registo → CV em 10 etapas → PDF/Word → duplicar → eliminar), kit gratuito, isolamento entre contas, admin altera preço e WhatsApp, PWA, cabeçalhos de segurança, acessibilidade (axe, WCAG 2 AA) e ausência de scroll horizontal no telemóvel.
+- **Pagamentos manuais**: criação do pedido e preço vindo da BD, troca de método, limites, instruções da configuração central, envio do comprovativo (→ `PENDING_VERIFICATION`, sem acesso), só ADMIN confirma (→ `PAID` + auditoria), rejeição, pedido de novo comprovativo, códigos repetidos, cancelamento, downloads de kits e de CV bloqueados até à confirmação.
+- **E2E (desktop + Android)**: compra com M-Pesa → pendente → admin confirma → acesso; pedido de novo comprovativo → rejeição; configuração de pagamentos; jornada completa (registo → CV em 10 etapas → PDF/Word → duplicar → eliminar), kit gratuito, isolamento entre contas, admin altera preço e WhatsApp, PWA, cabeçalhos de segurança, acessibilidade (axe, WCAG 2 AA) e ausência de scroll horizontal no telemóvel.
 
 ## Produção e deploy
 
@@ -132,7 +140,8 @@ Configuração recomendada (baixo custo):
    - Build command: `npx prisma migrate deploy && npm run build`
    - A base de dados tem de estar acessível durante o build (as páginas públicas são pré-renderizadas).
 5. Depois do primeiro deploy: `npm run db:seed` e `npm run admin:create` apontando para a base de produção.
-6. No painel `/admin`: configurar WhatsApp e redes sociais, carregar os ficheiros de cada kit e só então ativá-los.
+6. No painel `/admin`: configurar WhatsApp e redes sociais, **Definições → Pagamentos** (números, métodos ativos, instruções), carregar os ficheiros de cada kit e só então ativá-los.
+7. Configurar o email de contacto (Definições → Site): recebe o aviso de cada pagamento por verificar.
 
 Checklist antes do lançamento: ver [SECURITY.md](./SECURITY.md#checklist-de-produção).
 
@@ -154,10 +163,10 @@ src/lib/           auth, segurança, storage, email, i18n, dinheiro, validação
 tests/             unit, integration, e2e
 ```
 
-## Próximos passos (Fase 2)
+## Próximos passos
 
-1. Implementar `PaymentProvider` real (M-Pesa primeiro) com credenciais oficiais — ver [PAYMENTS.md](./PAYMENTS.md).
-2. Checkout (nome, email, telefone, método) → pedido → confirmação → email com link para o kit.
+1. Integração por API com os operadores (M-Pesa primeiro) quando houver contrato e documentação oficial — mesma interface `PaymentProvider` ([PAYMENTS.md](./PAYMENTS.md)).
+2. Gateway de cartão oficial (`CardPaymentProvider`).
 3. Cupões (o modelo `Coupon` já existe).
 4. Geradores de carta de candidatura e de motivação (modelo `CoverLetter` já existe).
 5. Modelos de email e WhatsApp com "Copiar mensagem".

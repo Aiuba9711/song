@@ -3,14 +3,14 @@
  * - Páginas públicas: network-first com cópia em cache para uso offline.
  * - Área privada (/meu-espaco, /admin, /api, /entrar...): NUNCA em cache (dados pessoais).
  */
-const VERSION = "efmz-v1";
+const VERSION = "efmz-v2";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGES_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline";
 const PRECACHE = [OFFLINE_URL, "/favicon.svg", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 const PUBLIC_PAGES = ["/", "/cv-modelos", "/kits", "/conselhos", "/contactos", "/privacidade", "/termos"];
-const PRIVATE_PREFIXES = ["/meu-espaco", "/admin", "/api", "/entrar", "/registar", "/recuperar-senha", "/redefinir-senha"];
+const PRIVATE_PREFIXES = ["/meu-espaco", "/admin", "/checkout", "/api", "/entrar", "/registar", "/recuperar-senha", "/redefinir-senha"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting()));

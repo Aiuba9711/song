@@ -36,6 +36,17 @@ e todas as verificações acontecem no servidor.
 - **Logs**: IPs guardados apenas como HMAC (`APP_SECRET`); `AuditLog` para login, alterações administrativas (incluindo preço antes/depois) e pedidos.
 - **Consentimento**: aceitação de termos/privacidade registada (`termsAcceptedAt`); marketing opcional e revogável; analytics (Fase 3) só com consentimento.
 
+## Pagamentos manuais
+
+- Informar um código de transação **nunca** liberta um produto: o pedido fica `PENDING_VERIFICATION`.
+- Só a permissão `payments.verify` (apenas `ADMIN`) — ou, no futuro, uma API oficial — muda um pedido para `PAID`, através de uma única função (`markPaymentSucceeded`) com atualizações condicionais e registo em `AuditLog` (estado de/para, autor, valor, código).
+- Preço calculado no servidor a partir da BD; valores enviados pelo cliente são ignorados.
+- O cliente só atua sobre os seus pedidos; códigos de transação repetidos são recusados/assinalados.
+- Comprovativos privados (JPG/PNG/PDF ≤ 3 MB, *magic bytes*), visíveis só a administradores, servidos com CSP `sandbox`.
+- Números de destino na configuração central (BD), nunca no código; alterações auditadas.
+- `/checkout` nunca é guardado em cache pelo service worker nem indexado.
+- Downloads de kits (e de CVs, quando pagos) verificam o pedido `PAID` em cada pedido de ficheiro.
+
 ## Validação de entradas e XSS
 
 - Todas as entradas validadas com **zod** no servidor (tamanhos máximos, formatos, enums).
@@ -66,6 +77,8 @@ instâncias serverless sem Redis):
 | Recuperação de senha | 3 / hora por email; 10 / hora por IP |
 | Downloads/exportações | 60 / hora por utilizador |
 | Uploads de fotos | 30 / hora por utilizador |
+| Início de checkout | 20 / hora por utilizador (máx. 5 pedidos em aberto) |
+| Envio de dados de pagamento | 10 / hora por utilizador |
 
 `RATE_LIMIT_SCALE` (padrão 1) só deve ser aumentado em ambientes de teste.
 
@@ -101,6 +114,8 @@ Rever a cada atualização do Prisma.
 - [ ] Política de privacidade e termos revistos por um jurista (legislação moçambicana aplicável)
 - [ ] Monitorização de `/api/health` e alertas de erros
 - [ ] Rever `AuditLog` periodicamente
+- [ ] Definições → Pagamentos: confirmar números, titular e instruções; email de contacto configurado para os avisos
+- [ ] Só contas de confiança com papel `ADMIN` (podem confirmar pagamentos)
 
 ## Reportar vulnerabilidades
 

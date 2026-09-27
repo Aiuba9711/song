@@ -1,95 +1,137 @@
 # Pagamentos — Emprego Fácil MZ
 
-> **Estado: Fase 2 — ainda não implementado.** Nenhuma API de pagamento foi inventada nem usada.
-> A Fase 1 inclui apenas produtos gratuitos (pedido `PAID` de 0 MT com fornecedor `FREE`),
-> o que já exercita o fluxo pedido → entrega → download.
+> **Estado (Fase 2): pagamento MANUAL por M-Pesa, e-Mola e mKesh, verificado por um administrador.**
+> Nenhuma API de operador foi implementada ou inventada. O cartão bancário está preparado apenas
+> como interface (`CardPaymentProvider`), indisponível até existir um gateway oficial.
 
-## Objetivo
+## Princípios
 
-Aceitar pagamentos em Meticais pelos métodos usados em Moçambique — **M-Pesa**, **e-Mola**,
-**mKesh** e **cartão bancário** — através de uma camada abstrata que permite adicionar ou trocar
-gateways sem alterar o resto da aplicação.
+1. **Os números de pagamento não estão no código.** Vivem na tabela `PaymentSettings` e são
+   editados em **Admin → Definições → Pagamentos**. Na instalação, o seed pode lê-los das variáveis
+   `SEED_MPESA_NUMBER`, `SEED_EMOLA_NUMBER` e `SEED_MKESH_NUMBER` (só na primeira criação).
+2. **Informar um código de transação NUNCA liberta o produto.** O pedido fica
+   `PENDING_VERIFICATION` até um administrador confirmar a transação no extrato do operador.
+3. **Só duas vias podem mudar um pedido para `PAID`**: a confirmação de um administrador
+   (permissão `payments.verify`, apenas `ADMIN`) ou, no futuro, a confirmação de uma API oficial.
+   Ambas passam por `markPaymentSucceeded()` (`src/server/payments/transitions.ts`), que regista a
+   alteração em `AuditLog`.
+4. **O preço é sempre calculado no servidor** a partir da base de dados.
 
 ## Arquitetura
 
 ```
 PaymentProvider (interface — src/lib/payments/types.ts)
- ├─ MpesaProvider    (Vodacom M-Pesa)       ← a implementar com documentação oficial
- ├─ EmolaProvider    (Movitel e-Mola)       ← a implementar com documentação oficial
- ├─ MkeshProvider    (Tmcel mKesh)          ← a implementar com documentação oficial
- ├─ CardProvider     (gateway de cartões)   ← a escolher
- └─ MockPaymentProvider                     ← SÓ desenvolvimento/testes, claramente identificado
+  getPaymentInstructions() · createPayment() · verifyPayment() · getPaymentStatus() · isAvailable()
+ ├─ ManualMobileMoneyProvider("MPESA" | "EMOLA" | "MKESH")   src/server/payments/manual.ts
+ │     + submitCustomerReport()  — dados informados pelo cliente
+ └─ CardPaymentProvider (placeholder, isAvailable() = false)  src/server/payments/card.ts
+
+registry.ts        getPaymentProvider(), listAvailableMethods()
+settings.ts        getPaymentSettings() (configuração central), resumo público em cache
+transitions.ts     markPaymentSucceeded() — única transição para PAID
+review.ts          listas para o admin (por verificar / a aguardar / histórico, alerta de códigos repetidos)
+src/server/checkout.ts   resolução do item e preço, criação/cancelamento do pedido, acesso a downloads de CV
+src/lib/pricing.ts       calculateTotals() (funções puras, testadas)
 ```
 
-Interface (já definida em código):
-
-```ts
-interface PaymentProvider {
-  id: PaymentProviderId;               // MPESA | EMOLA | MKESH | CARD | MOCK
-  label: string;
-  isConfigured(): boolean;              // credenciais presentes nas variáveis de ambiente
-  initiate(input): Promise<SUCCEEDED | PENDING | REDIRECT | FAILED>;
-  getStatus(providerReference): Promise<PaymentStatusResult>;
-  verifyWebhook?(request): Promise<{ providerReference, status } | null>;
-}
-```
-
-- `PENDING` cobre carteiras móveis em que o cliente confirma com PIN no telemóvel (push/USSD).
-- `REDIRECT` cobre gateways de cartão com página segura alojada pelo fornecedor (não tocamos em dados de cartão).
-- O registo `Payment` guarda `provider`, `status`, `providerReference` (único por fornecedor) e metadados **sem segredos**.
-
-## Fluxo de compra (Fase 2)
+## Fluxo
 
 ```
-Produto → Checkout (nome, email, telefone, método, cupão)
-  → Order(status=AWAITING_PAYMENT) + Payment(status=PENDING)   [transação]
-  → provider.initiate()
-      SUCCEEDED → confirmar
-      PENDING   → página "Confirme no seu telemóvel" + consulta periódica getStatus()
-      REDIRECT  → gateway → returnUrl → getStatus()
-  → callback/webhook do fornecedor → verifyWebhook() → getStatus()   (fonte de verdade)
-  → Confirmação (idempotente): Payment=SUCCEEDED, Order=PAID, paidAt, cupão +1
-  → "Pagamento confirmado! Obrigado pela compra." + botão "Aceder ao meu kit"
-  → Email (orderDeliveredEmail) com a lista de produtos e link para a conta
+Produto (ou CV com download pago)
+  → /checkout?produto=… | ?cv=…        escolher M-Pesa / e-Mola / mKesh + nome, email, telefone
+  → Order AWAITING_PAYMENT + Payment PENDING (mode MANUAL, cópia do número de destino)
+  → /checkout?pedido=EF-…              número, valor exato, referência (com "Copiar") e instruções
+  → cliente paga no operador
+  → cliente informa: titular, número usado, código da transação, data/hora, comprovativo (opcional)
+  → Payment + Order PENDING_VERIFICATION  → /checkout/pending (atualiza-se sozinha)
+      email ao cliente + email ao contacto do site (Definições → Site)
+  → Admin → Pagamentos pendentes:
+      CONFIRMAR PAGAMENTO       → Payment SUCCEEDED, Order PAID → /checkout/success, email com acesso
+      REJEITAR PAGAMENTO        → Payment REJECTED, Order FAILED → /checkout/failed (com o motivo), email
+      PEDIR NOVO COMPROVATIVO   → Payment RESUBMISSION_REQUESTED, Order AWAITING_PAYMENT, email;
+                                  o cliente reenvia na mesma página
+  → Produto liberado: "Meus kits" (downloads protegidos) ou download do CV
 ```
 
-Regras:
+### Estados
 
-1. **Nunca** marcar um pedido como pago com base apenas no redirecionamento do browser — confirmar sempre no servidor (`getStatus` ou webhook verificado).
-2. **Idempotência**: `@@unique([provider, providerReference])` em `Payment`; a confirmação só muda o estado se ainda não estiver `PAID`.
-3. O **valor é recalculado no servidor** (preço atual na BD − cupão válido); o cliente nunca envia o total.
-4. Os ficheiros não são enviados por email: o email tem um link para "Meus kits" (downloads protegidos por sessão; com S3, URL assinado de 5 minutos). `signPayload/verifySignedPayload` (src/lib/auth/tokens.ts) permite links temporários sem sessão se necessário.
-5. Registar cada transição em `AuditLog`.
-6. Callbacks devem ter rate limiting e validação de origem/assinatura conforme a documentação de cada fornecedor.
-
-## Variáveis de ambiente (previstas)
-
-```
-PAYMENTS_ENABLED_PROVIDERS="mpesa,emola"   # quais aparecem no checkout
-MPESA_API_KEY=""
-MPESA_PUBLIC_KEY=""
-MPESA_SERVICE_PROVIDER_CODE=""
-MPESA_ENVIRONMENT="sandbox"                # sandbox | production
-EMOLA_*   MKESH_*   CARD_*                 # definidos quando houver documentação oficial
-```
-
-Credenciais **apenas** em variáveis de ambiente do servidor; nunca em código, BD ou cliente.
-
-## O que falta para cada fornecedor
-
-| Fornecedor | Necessário antes de implementar |
+| Order | Significado |
 |---|---|
-| **M-Pesa (Vodacom Moçambique)** | Conta de comerciante/empresa, registo no portal oficial de programadores da Vodacom M-Pesa, credenciais de sandbox e produção, código de prestador de serviço, documentação oficial da API (endpoints, cifra da chave, formatos de resposta e callback). |
-| **e-Mola (Movitel)** | Contrato de comerciante e documentação técnica oficial fornecida pela Movitel. |
-| **mKesh (Tmcel)** | Contrato de comerciante e documentação técnica oficial fornecida pela Tmcel. |
-| **Cartão bancário** | Escolha de um gateway que opere com MZN (banco local ou agregador), contrato, documentação e ambiente de testes. Preferir página de pagamento alojada pelo gateway (reduz obrigações PCI). |
+| `AWAITING_PAYMENT` | Pedido criado; o cliente ainda não informou o pagamento (ou foi pedido novo comprovativo) |
+| `PENDING_VERIFICATION` | O cliente informou a transação; aguarda o administrador |
+| `PAID` | Confirmado por um administrador (ou, no futuro, por API oficial) |
+| `FAILED` | Pagamento rejeitado |
+| `CANCELLED` | Cancelado pelo cliente antes de informar o pagamento |
 
-Até lá, a página de produto mostra o botão **Comprar** desativado e a alternativa "Encomendar pelo
-WhatsApp" (número configurado no admin); o administrador pode acompanhar pedidos em `/admin/pedidos`.
+| Payment | Significado |
+|---|---|
+| `PENDING` | À espera dos dados do cliente |
+| `PENDING_VERIFICATION` | Dados recebidos, por verificar |
+| `RESUBMISSION_REQUESTED` | O administrador pediu novo comprovativo |
+| `SUCCEEDED` / `REJECTED` | Decisão do administrador |
+| `CANCELLED` | Substituído (mudança de método) ou pedido cancelado |
+
+### Proteções
+
+- Atualizações condicionais (`updateMany where status = …`) dentro de transações: não há confirmação dupla nem corridas entre dois administradores.
+- O cliente só pode informar pagamentos dos **seus** pedidos; só uma vez enquanto está em verificação.
+- O mesmo código de transação não pode ser usado em dois pedidos do mesmo operador; códigos repetidos aparecem com alerta ao administrador.
+- Comprovativos: JPG, PNG ou PDF até 3 MB, validados por *magic bytes*, guardados em armazenamento privado e visíveis só para administradores (`/api/admin/payments/[id]/proof`, com `Content-Security-Policy: sandbox`).
+- Números de destino validados por operador (M-Pesa 84/85, e-Mola 86/87, mKesh 82/83) e copiados para cada pagamento (auditoria).
+- Limites: 20 inícios de checkout e 10 envios de comprovativo por hora por utilizador; máx. 5 pedidos em aberto.
+- Pedidos em aberto para o mesmo item são reutilizados (sem duplicados); trocar de método mantém o mesmo número de pedido.
+- `AuditLog`: `order.create`, `order.cancel`, `payment.submitted`, `payment.confirm` (com estados de/para), `payment.reject`, `payment.request_new_proof`, `settings.payments_update`.
+
+## Configuração (Admin → Definições → Pagamentos)
+
+| Campo | Descrição |
+|---|---|
+| Número M-Pesa / e-Mola / mKesh | Número de destino de cada operador |
+| Método ativo | Ativa/desativa cada método (não é possível ativar sem número) |
+| Nome do titular | Opcional — mostrado ao cliente |
+| Instruções de pagamento | Uma instrução por linha, mostradas no checkout |
+| Moeda | Os pagamentos por carteira móvel só funcionam em MZN |
+| Valor padrão | Preço do download de um CV (ex.: 199 MT) |
+| Cobrar o download de CVs | Desligado por omissão. Quando ligado, criar/editar/pré-visualizar continuam grátis e a "geração final" (PDF/DOCX) exige pagamento confirmado **por CV** |
+| Cartão bancário | Sempre desativado até existir integração oficial |
+
+## Download pago de CVs
+
+Com "Cobrar o download de CVs" ativo:
+
+- as rotas `/api/cv/[id]/pdf` e `/api/cv/[id]/docx` devolvem **402** sem um pedido `PAID` de desbloqueio para esse CV;
+- a interface mostra "Desbloquear download · 199 MT" (lista, pré-visualização e última etapa do assistente);
+- o desbloqueio é por CV: uma cópia duplicada é um novo CV.
+
+## Cartão bancário (futuro)
+
+`CardPaymentProvider` fixa o contrato. Para ativar:
+
+1. Escolher um gateway **oficial** que opere em MZN (banco local ou agregador); obter contrato, documentação e ambiente de testes.
+2. Preferir página de pagamento alojada pelo gateway — esta aplicação nunca deve receber dados de cartão.
+3. Implementar `createPayment` (sessão no gateway, `providerReference`), `getPaymentStatus` (consulta no servidor) e um webhook com assinatura verificada que chame `markPaymentSucceeded(..., source: "api")`.
+4. Credenciais apenas em variáveis de ambiente (`CARD_*`).
+
+## Integração futura por API (M-Pesa, e-Mola, mKesh)
+
+Quando houver contrato de comerciante e documentação técnica **oficial** de cada operador, criar um
+provider com `mode = "API"` que implemente a mesma interface; o checkout e a área de administração
+continuam a funcionar sem alterações. Até lá, o pagamento manual é o único suportado.
+
+| Operador | Necessário antes de integrar por API |
+|---|---|
+| M-Pesa (Vodacom) | Conta de comerciante, acesso ao portal oficial de programadores, credenciais de sandbox/produção, documentação oficial |
+| e-Mola (Movitel) | Contrato de comerciante e documentação técnica oficial |
+| mKesh (Tmcel) | Contrato de comerciante e documentação técnica oficial |
 
 ## Assinatura futura (Emprego Fácil Pro)
 
-Não será implementada cobrança recorrente até que o fornecedor escolhido suporte débitos
-recorrentes ou pré-autorizações de forma fiável. O modelo previsto: `Product.type = SUBSCRIPTION`
-+ tabela `Subscription` (utilizador, plano, período, estado) a acrescentar nessa fase; renovação por
-pagamento manual mensal (lembrete por email/WhatsApp) é a alternativa realista para carteiras móveis.
+Sem cobrança recorrente até um fornecedor a suportar de forma fiável. Alternativa realista com
+carteiras móveis: renovação manual mensal com lembrete por email/WhatsApp.
+
+## Operação diária (administrador)
+
+1. Abrir **Pagamentos pendentes** (o menu mostra quantos estão por verificar).
+2. Para cada pedido, confirmar no extrato/app do operador: valor exato, código da transação, número de origem e data.
+3. Se o código aparecer com alerta de repetido, investigar antes de confirmar.
+4. Confirmar, rejeitar (com motivo) ou pedir novo comprovativo (com mensagem).

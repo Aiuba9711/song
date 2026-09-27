@@ -10,6 +10,8 @@ export const PERMISSIONS = {
   "content.manage": ["ADMIN", "EDITOR"],
   "products.manage": ["ADMIN"],
   "orders.view": ["ADMIN"],
+  // Única permissão que pode mudar um pedido de PENDING_VERIFICATION para PAID.
+  "payments.verify": ["ADMIN"],
   "users.manage": ["ADMIN"],
   "settings.manage": ["ADMIN"],
 } as const satisfies Record<string, readonly Role[]>;

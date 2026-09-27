@@ -70,7 +70,7 @@ Ver também: [DATABASE.md](./DATABASE.md), [PAYMENTS.md](./PAYMENTS.md), [SECURI
 | Testes | **Vitest** (unit/integração) + **Playwright** (e2e, incluindo viewport móvel) | Rápidos e standard. |
 | Armazenamento | Abstração `StorageProvider` → `local` (dev) / `s3` (produção) | S3-compatível é barato e portável. |
 | Email | Abstração `EmailProvider` → `console` (dev) / `resend` (API HTTP) | Sem SDK; pode trocar por SMTP. |
-| Pagamentos | Abstração `PaymentProvider` (Fase 2) | Ver PAYMENTS.md. |
+| Pagamentos | Abstração `PaymentProvider`: pagamento manual verificado pelo admin; APIs oficiais no futuro | Ver PAYMENTS.md. |
 
 **Não usado de propósito**: next-auth (desnecessário para email+senha), next-pwa (service worker
 escrito à mão é mais pequeno e previsível), fontes Google (poupança de dados), bibliotecas de UI
@@ -218,15 +218,16 @@ Opcional em produção: `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` (
 | PostgreSQL gerido | Pronto (qualquer Postgres ≥ 14) | Criar instância e definir `DATABASE_URL` |
 | Armazenamento S3 | Implementado (`STORAGE_DRIVER=s3`) | Bucket + credenciais |
 | Email (Resend) | Implementado via API HTTP | Conta, domínio verificado, `RESEND_API_KEY` |
-| M-Pesa (Vodacom) | **Fase 2 — não implementado** | Contrato e credenciais do portal de programadores M-Pesa |
-| e-Mola (Movitel) | **Fase 2 — não implementado** | Documentação oficial e credenciais do comerciante |
-| mKesh (Tmcel) | **Fase 2 — não implementado** | Documentação oficial e credenciais do comerciante |
-| Cartão bancário | **Fase 2 — não implementado** | Escolha de gateway (ex.: agregador local ou internacional) |
+| M-Pesa (Vodacom) | **Pagamento manual** (número configurado no admin) · API por integrar | Contrato e documentação oficial para a integração por API |
+| e-Mola (Movitel) | **Pagamento manual** · API por integrar | Contrato e documentação técnica oficial |
+| mKesh (Tmcel) | **Pagamento manual** · API por integrar | Contrato e documentação técnica oficial |
+| Cartão bancário | Placeholder (`CardPaymentProvider`) | Escolha de gateway oficial em MZN |
 | Google Analytics / Meta Pixel | **Fase 3** | IDs de medição + banner de consentimento |
 | IA | **Fase 4** | Fornecedor de modelo + chave de API |
 
-Nenhuma API de pagamento é inventada: a Fase 2 define a interface `PaymentProvider` e um
-`MockPaymentProvider` claramente marcado para desenvolvimento. Ver PAYMENTS.md.
+Nenhuma API de pagamento foi inventada: a interface `PaymentProvider` tem hoje o
+`ManualMobileMoneyProvider` (transferência para números configurados no admin, confirmada por um
+administrador) e o `CardPaymentProvider` (placeholder indisponível). Ver PAYMENTS.md.
 
 ---
 
@@ -244,8 +245,11 @@ Nenhuma API de pagamento é inventada: a Fase 2 define a interface `PaymentProvi
 9. Testes unitários, de integração e e2e (desktop + móvel); documentação.
 
 ### Fase 2
-Cartas (candidatura/motivação), modelos de email e WhatsApp, kits pagos, `PaymentProvider`
-+ fornecedores reais, checkout, pedidos, cupões, email de confirmação com links temporários.
+- ✅ Checkout mobile-first, `PaymentProvider` com `ManualMobileMoneyProvider` (M-Pesa, e-Mola, mKesh
+  verificados por um administrador), `CardPaymentProvider` (placeholder), configuração central de
+  pagamentos, pagamentos pendentes no admin, download pago de CVs (opcional), emails de estado.
+- ⏳ Integração por API com operadores (quando houver documentação oficial), cartas
+  (candidatura/motivação), modelos de email e WhatsApp, cupões.
 
 ### Fase 3
 Mais modelos (10+ layouts), blog, páginas SEO (`/cv-primeiro-emprego`, …, `/kit-emprego`),

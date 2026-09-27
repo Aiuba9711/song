@@ -113,6 +113,14 @@ const PRODUCTS: SeedProduct[] = [
   },
 ];
 
+const DEFAULT_PAYMENT_INSTRUCTIONS = [
+  "1. Abra a aplicação ou o menu do seu operador e escolha enviar/transferir dinheiro.",
+  "2. Envie o valor exato para o número indicado.",
+  "3. Se o operador permitir, escreva a referência do pedido na descrição.",
+  "4. Guarde a mensagem (SMS) de confirmação: precisa do código da transação.",
+  "5. Volte a esta página e informe os dados do pagamento. O acesso é libertado depois da verificação.",
+].join("\n");
+
 async function main() {
   for (const [i, t] of TEMPLATES.entries()) {
     await db.cVTemplate.upsert({
@@ -158,6 +166,30 @@ async function main() {
     }
     console.info("✔ ficheiros do modelo gratuito");
   }
+
+  // Configuração de pagamentos manuais. Os números vêm APENAS de variáveis de ambiente
+  // (nunca do código) e só são usados na primeira criação — depois gerem-se no admin.
+  const digits = (v: string | undefined) => (v ?? "").replace(/\D/g, "") || null;
+  const mpesa = digits(process.env.SEED_MPESA_NUMBER);
+  const emola = digits(process.env.SEED_EMOLA_NUMBER);
+  const mkesh = digits(process.env.SEED_MKESH_NUMBER);
+  await db.paymentSettings.upsert({
+    where: { id: "default" },
+    create: {
+      id: "default",
+      mpesaNumber: mpesa,
+      mpesaEnabled: !!mpesa,
+      emolaNumber: emola,
+      emolaEnabled: !!emola,
+      mkeshNumber: mkesh,
+      mkeshEnabled: !!mkesh,
+      instructions: DEFAULT_PAYMENT_INSTRUCTIONS,
+      currency: "MZN",
+      defaultPriceMinor: 19900,
+    },
+    update: {},
+  });
+  console.info(`✔ definições de pagamento (${[mpesa && "M-Pesa", emola && "e-Mola", mkesh && "mKesh"].filter(Boolean).join(", ") || "sem números — configurar no admin"})`);
 
   await db.siteSettings.upsert({
     where: { id: "default" },

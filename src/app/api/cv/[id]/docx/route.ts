@@ -2,6 +2,7 @@ import { renderCvDocx } from "@/cv/docx";
 import { getCurrentUser } from "@/lib/auth/session";
 import { attachment, jsonError, PRIVATE_FILE_HEADERS } from "@/lib/http";
 import { LIMITS, rateLimit } from "@/lib/security/rate-limit";
+import { canDownloadCv } from "@/server/checkout";
 import { exportFileName, getCvForExport, recordDownload } from "@/server/cv";
 
 export const runtime = "nodejs";
@@ -15,6 +16,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   const data = await getCvForExport(user.id, id);
   if (!data) return jsonError(404, "CV não encontrado.");
+  // Download pago (quando ativado no admin): só depois de o pagamento ser confirmado.
+  if (!(await canDownloadCv(user.id, id))) return jsonError(402, "O download deste CV requer pagamento confirmado.");
 
   const docx = await renderCvDocx(data.content, data.theme, data.photo);
   const fileName = exportFileName(data.content, "docx");

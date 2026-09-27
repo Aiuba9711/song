@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Copy, Download, Eye, FilePlus2, FileText, Pencil, Trash2 } from "lucide-react";
+import { Copy, Download, Eye, FilePlus2, FileText, Lock, Pencil, Trash2 } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { buttonClass, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,6 +10,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { requireUser } from "@/lib/auth/guards";
 import { formatDate } from "@/lib/dates";
+import { formatMoney } from "@/lib/money";
+import { getCvDownloadAccess } from "@/server/checkout";
 import { listUserCvs } from "@/server/cv";
 import { deleteCvAction, duplicateCvAction } from "./actions";
 
@@ -23,7 +25,7 @@ const ERRORS: Record<string, string> = {
 
 export default async function CvListPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const [user, params] = await Promise.all([requireUser("/meu-espaco/cvs"), searchParams]);
-  const cvs = await listUserCvs(user.id);
+  const [cvs, access] = await Promise.all([listUserCvs(user.id), getCvDownloadAccess(user.id)]);
 
   return (
     <>
@@ -78,12 +80,20 @@ export default async function CvListPage({ searchParams }: { searchParams: Promi
                   <ButtonLink href={`/meu-espaco/cvs/${cv.id}`} variant="outline" size="sm" icon={<Eye className="size-4" aria-hidden />}>
                     Ver
                   </ButtonLink>
-                  <a href={`/api/cv/${cv.id}/pdf`} className={buttonClass("outline", "sm")} download>
-                    <Download className="size-4" aria-hidden /> PDF
-                  </a>
-                  <a href={`/api/cv/${cv.id}/docx`} className={buttonClass("outline", "sm")} download>
-                    <Download className="size-4" aria-hidden /> Word
-                  </a>
+                  {access.paywall && !access.unlocked.has(cv.id) ? (
+                    <ButtonLink href={`/checkout?cv=${cv.id}`} prefetch={false} variant="success" size="sm" className="col-span-2" icon={<Lock className="size-4" aria-hidden />}>
+                      Desbloquear · {formatMoney(access.priceMinor, access.currency)}
+                    </ButtonLink>
+                  ) : (
+                    <>
+                      <a href={`/api/cv/${cv.id}/pdf`} className={buttonClass("outline", "sm")} download>
+                        <Download className="size-4" aria-hidden /> PDF
+                      </a>
+                      <a href={`/api/cv/${cv.id}/docx`} className={buttonClass("outline", "sm")} download>
+                        <Download className="size-4" aria-hidden /> Word
+                      </a>
+                    </>
+                  )}
                 </div>
                 <div className="mt-2 flex gap-2 border-t border-slate-100 pt-3">
                   <form action={duplicateCvAction}>

@@ -2,20 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileStack, LayoutDashboard, Package, Receipt, ScrollText, Settings, Users } from "lucide-react";
+import { BadgeDollarSign, FileStack, LayoutDashboard, Package, Receipt, ScrollText, Settings, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const ICONS = { dashboard: LayoutDashboard, products: Package, orders: Receipt, users: Users, templates: FileStack, settings: Settings, audit: ScrollText };
-export type AdminNavItem = { href: string; label: string; icon: keyof typeof ICONS };
+const ICONS = { payments: BadgeDollarSign, dashboard: LayoutDashboard, products: Package, orders: Receipt, users: Users, templates: FileStack, settings: Settings, audit: ScrollText };
+export type AdminNavItem = { href: string; label: string; icon: keyof typeof ICONS; count?: number };
 
 export function AdminNav({ items }: { items: AdminNavItem[] }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Administração" className="-mx-4 overflow-x-auto px-4 md:mx-0 md:w-56 md:shrink-0 md:overflow-visible md:px-0">
       <ul className="flex gap-1 md:sticky md:top-24 md:flex-col">
-        {items.map(({ href, label, icon }) => {
+        {items.map(({ href, label, icon, count }) => {
           const Icon = ICONS[icon];
-          const active = href === "/admin" ? pathname === href : pathname.startsWith(href);
+          // O item mais específico ganha (ex.: /admin/pedidos/pendentes vs /admin/pedidos).
+          const active =
+            href === "/admin"
+              ? pathname === href
+              : pathname.startsWith(href) && !items.some((o) => o.href !== href && o.href.startsWith(href) && pathname.startsWith(o.href));
           return (
             <li key={href}>
               <Link
@@ -26,8 +30,13 @@ export function AdminNav({ items }: { items: AdminNavItem[] }) {
                   active ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100",
                 )}
               >
-                <Icon className="size-4.5" aria-hidden />
+                <Icon className="size-4.5 shrink-0" aria-hidden />
                 {label}
+                {!!count && (
+                  <span className="ml-auto rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white" aria-label={`${count} por verificar`}>
+                    {count}
+                  </span>
+                )}
               </Link>
             </li>
           );

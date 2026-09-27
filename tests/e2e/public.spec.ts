@@ -28,7 +28,7 @@ test.describe("páginas públicas", () => {
     await expect(page.getByText("399 MT").first()).toBeVisible();
     await page.getByRole("link", { name: "Kit Emprego Fácil MZ — Profissional" }).click();
     await expect(page.getByRole("heading", { name: "O que está incluído" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Comprar" })).toBeDisabled();
+    await expect(page.getByRole("link", { name: "Comprar" })).toHaveAttribute("href", "/checkout?produto=kit-emprego-profissional");
     await expectNoHorizontalScroll(page);
   });
 
@@ -58,6 +58,8 @@ test.describe("páginas públicas", () => {
 
   for (const path of ["/", "/cv-modelos", "/kits", "/kits/modelo-gratuito", "/entrar", "/registar", "/contactos", "/privacidade"]) {
     test(`acessibilidade (axe) ${path}`, async ({ page }) => {
+      // Sem animações: o contraste é medido no estado final (a app respeita prefers-reduced-motion).
+      await page.emulateMedia({ reducedMotion: "reduce" });
       await page.goto(path);
       const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).exclude('[aria-hidden="true"]').analyze();
       const serious = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");

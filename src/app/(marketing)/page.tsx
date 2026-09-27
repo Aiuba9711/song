@@ -23,6 +23,7 @@ import { Card } from "@/components/ui/card";
 import { LAYOUTS } from "@/cv/layouts";
 import { formatMoney } from "@/lib/money";
 import { getFeaturedProduct } from "@/server/catalog";
+import { getPublicPaymentSummary } from "@/server/payments/settings";
 
 export const revalidate = 3600;
 
@@ -49,14 +50,23 @@ const STEPS = [
 ];
 
 const FAQ = [
-  { q: "Criar o CV é gratuito?", a: "Sim. Pode criar, editar e descarregar os seus CVs em PDF e Word gratuitamente. Os kits com materiais adicionais são pagos." },
+
   { q: "Funciona no telemóvel?", a: "Sim. A plataforma foi pensada para smartphones Android e funciona bem mesmo com internet lenta. Pode instalá-la no ecrã inicial." },
   { q: "Os meus dados ficam públicos?", a: "Não. Os seus CVs são privados e só podem ser vistos e descarregados por si, depois de entrar na sua conta." },
   { q: "O Emprego Fácil MZ garante emprego?", a: "Não. Nenhuma ferramenta garante emprego. Ajudamos a apresentar a sua candidatura de forma mais clara e profissional." },
 ];
 
 export default async function HomePage() {
-  const featured = await getFeaturedProduct();
+  const [featured, payments] = await Promise.all([getFeaturedProduct(), getPublicPaymentSummary()]);
+  const faq = [
+    payments.cvPaywallEnabled
+      ? {
+          q: "Criar o CV é gratuito?",
+          a: `Criar, editar e pré-visualizar é gratuito. O download final em PDF e Word custa ${formatMoney(payments.cvPriceMinor, payments.currency)} por CV, pago por M-Pesa, e-Mola ou mKesh.`,
+        }
+      : { q: "Criar o CV é gratuito?", a: "Sim. Pode criar, editar e descarregar os seus CVs em PDF e Word gratuitamente. Os kits com materiais adicionais são pagos." },
+    ...FAQ,
+  ];
 
   return (
     <>
@@ -250,7 +260,7 @@ export default async function HomePage() {
           Perguntas frequentes
         </h2>
         <div className="mt-6 max-w-3xl">
-          <Faq items={FAQ} />
+          <Faq items={faq} />
         </div>
       </section>
 
@@ -267,7 +277,7 @@ export default async function HomePage() {
         data={{
           "@context": "https://schema.org",
           "@type": "FAQPage",
-          mainEntity: FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+          mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
         }}
       />
     </>

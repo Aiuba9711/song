@@ -57,13 +57,16 @@ Guardar um CV substitui todas as listas numa transação (simples e consistente 
 |---|---|
 | `Product` | Kits. `priceMinor` (0 = gratuito), `compareAtPriceMinor`, `status` (`DRAFT`/`ACTIVE`/`ARCHIVED`), `features[]`, `faq` (JSON), `tier`, `isFeatured`. Preços **editáveis no admin**. |
 | `ProductFile` | Ficheiro entregue (chave privada no storage). |
-| `Order` | `number` legível (`EF-AAAAMMDD-XXXX`), dados do cliente copiados, totais, estado (`PENDING`, `AWAITING_PAYMENT`, `PAID`, `FAILED`, `CANCELLED`, `REFUNDED`). |
-| `OrderItem` | Cópia do nome e preço no momento da compra. |
-| `Payment` | Tentativa de pagamento: `provider` (`FREE`, `MOCK`, `MPESA`, `EMOLA`, `MKESH`, `CARD`), `status`, `providerReference` (único por fornecedor → idempotência de callbacks). |
+| `Order` | `number` legível (`EF-AAAAMMDD-XXXX`), dados do cliente copiados, totais, estado (`PENDING`, `AWAITING_PAYMENT`, `PENDING_VERIFICATION`, `PAID`, `FAILED`, `CANCELLED`, `REFUNDED`), `paidAt`, `cancelledAt`. |
+| `OrderItem` | `kind` (`PRODUCT` ou `CV_UNLOCK`), `productId` ou `cvId`, cópia do nome e preço no momento da compra. |
+| `Payment` | Tentativa de pagamento: `provider` (`FREE`, `MOCK`, `MPESA`, `EMOLA`, `MKESH`, `CARD`), `mode` (`MANUAL`/`API`), `status` (`PENDING`, `PENDING_VERIFICATION`, `RESUBMISSION_REQUESTED`, `SUCCEEDED`, `REJECTED`, `FAILED`, `CANCELLED`, `REFUNDED`). Manual: `payeeNumber` (cópia do número de destino), `payerName`, `payerPhone`, `transactionId`, `reportedPaidAt`, `proofKey`/`proofMime` (comprovativo privado), `submittedAt`, `reviewedAt`, `reviewedById`, `reviewNote`. API: `providerReference` (único por fornecedor). |
+| `PaymentSettings` | Linha única: números e estado de M-Pesa/e-Mola/mKesh, titular, instruções, moeda, valor padrão (download de CV), `cvPaywallEnabled`, `cardEnabled` (sempre falso sem gateway). Editável no admin. |
 | `Coupon` | Percentagem **ou** valor fixo, validade, limite de utilizações, produtos aplicáveis (vazio = todos). *(Fase 2)* |
 | `Download` | Histórico (CV PDF/DOCX, ficheiros de produto). |
 
-O acesso a um produto é derivado de `OrderItem` com `Order.status = PAID` e `Order.userId` do utilizador.
+O acesso a um produto (ou ao download de um CV, quando pago) é derivado de `OrderItem` com
+`Order.status = PAID` e `Order.userId` do utilizador. Só um administrador (ou, no futuro, uma API
+oficial) muda um pedido para `PAID` — ver PAYMENTS.md.
 
 ### Crescimento e conteúdo
 
@@ -94,7 +97,8 @@ mais tarde; as funcionalidades são ativadas por fases.
 
 - 10 modelos de CV (Primeiro emprego, Administrativo, Contabilidade, RH, Saúde, Educação, Informática, Engenharia, Vendas/Marketing, Executivo);
 - produtos: Modelo Gratuito (0 MT, com 2 ficheiros Word gerados), Kit Básico (199 MT), Kit Profissional (399 MT, destaque), Kit Premium (699 MT, rascunho);
-- linha `SiteSettings`.
+- linha `SiteSettings`;
+- linha `PaymentSettings` (números lidos de `SEED_*_NUMBER`, apenas na primeira criação; métodos ativos só se tiverem número).
 
 Os valores iniciais são apenas dados — depois do seed, preços e conteúdos gerem-se no painel admin.
 

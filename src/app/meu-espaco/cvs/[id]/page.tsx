@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Copy, Download, Pencil } from "lucide-react";
+import { ArrowLeft, Copy, Download, Lock, Pencil } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { buttonClass, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,6 +12,8 @@ import { LAYOUTS } from "@/cv/layouts";
 import { requireUser } from "@/lib/auth/guards";
 import { t } from "@/lib/i18n/messages";
 import { listActiveTemplates } from "@/server/catalog";
+import { formatMoney } from "@/lib/money";
+import { getCvDownloadAccess } from "@/server/checkout";
 import { getUserCv, themeOf, toCvContent } from "@/server/cv";
 import { duplicateCvAction, setTemplateAction } from "../actions";
 
@@ -20,7 +22,7 @@ export const metadata: Metadata = { title: "Pré-visualizar CV" };
 export default async function CvPreviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requireUser(`/meu-espaco/cvs/${id}`);
-  const [cv, templates] = await Promise.all([getUserCv(user.id, id), listActiveTemplates()]);
+  const [cv, templates, access] = await Promise.all([getUserCv(user.id, id), listActiveTemplates(), getCvDownloadAccess(user.id)]);
   if (!cv) notFound();
   const content = toCvContent(cv);
   const theme = themeOf(cv);
@@ -52,12 +54,23 @@ export default async function CvPreviewPage({ params }: { params: Promise<{ id: 
       <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
         <Card className="space-y-3 p-5">
           <h2 className="font-semibold">Descarregar</h2>
-          <a href={`/api/cv/${cv.id}/pdf`} className={buttonClass("primary", "lg", "w-full")} download>
-            <Download className="size-5" aria-hidden /> Baixar PDF
-          </a>
-          <a href={`/api/cv/${cv.id}/docx`} className={buttonClass("outline", "lg", "w-full")} download>
-            <Download className="size-5" aria-hidden /> Baixar Word
-          </a>
+          {access.paywall && !access.unlocked.has(cv.id) ? (
+            <>
+              <p className="text-sm text-slate-600">Pode editar e pré-visualizar à vontade. O download em PDF e Word fica disponível depois do pagamento confirmado.</p>
+              <ButtonLink href={`/checkout?cv=${cv.id}`} prefetch={false} variant="success" size="lg" className="w-full" icon={<Lock className="size-5" aria-hidden />}>
+                Desbloquear download · {formatMoney(access.priceMinor, access.currency)}
+              </ButtonLink>
+            </>
+          ) : (
+            <>
+              <a href={`/api/cv/${cv.id}/pdf`} className={buttonClass("primary", "lg", "w-full")} download>
+                <Download className="size-5" aria-hidden /> Baixar PDF
+              </a>
+              <a href={`/api/cv/${cv.id}/docx`} className={buttonClass("outline", "lg", "w-full")} download>
+                <Download className="size-5" aria-hidden /> Baixar Word
+              </a>
+            </>
+          )}
           <p className="text-xs text-slate-500">PDF para enviar por email e portais de emprego. Word para editar no computador.</p>
           <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-900">{t("disclaimer.review")}</p>
         </Card>
