@@ -39,6 +39,7 @@ model User {
   marketingConsent Boolean   @default(false)
   isActive         Boolean   @default(true)
   currentCvTemplateId String? // modelo escolhido para o CV em preparação
+  aiConsentAt         DateTime? // consentimento para enviar texto a um provedor de IA externo (null = sem consentimento)
   lastLoginAt      DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -193,6 +194,7 @@ model CV {
   purchasedAt  DateTime? // CV comprado (download final libertado; modelo fixo)
   // Conteúdo
   summary      String    @default("")
+  objective    String    @default("") // objetivo profissional (opcional)
   referencesOnRequest Boolean @default(false)
   hiddenSections String[] @default([]) // secções opcionais ocultas
   currentStep  Int       @default(1)

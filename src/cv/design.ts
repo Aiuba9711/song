@@ -183,4 +183,4 @@ export const SKILL_LABELS: Record<TemplateDesign["skillsStyle"], string> = {
   tags: "Etiquetas",
 };
 
-export const DEFAULT_SECTION_ORDER: SectionKey[] = ["summary", "experience", "education", "skills", "languages", "courses", "certifications", "custom", "references"];
+export const DEFAULT_SECTION_ORDER: SectionKey[] = ["summary", "objective", "experience", "education", "skills", "languages", "courses", "certifications", "custom", "references"];

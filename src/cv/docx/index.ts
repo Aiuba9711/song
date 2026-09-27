@@ -209,6 +209,7 @@ function sectionBody(s: PlanSection, ctx: Ctx): Paragraph[] {
   const small = hp(t.size.small);
   switch (s.key) {
     case "summary":
+    case "objective":
     case "custom":
       return richText(s.text, ctx);
     case "experience":

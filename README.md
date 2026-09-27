@@ -36,6 +36,7 @@ Pensada para smartphones Android e internet limitada.
 | Admin: Pagamentos pendentes (confirmar, rejeitar, pedir novo comprovativo) com auditoria | ✅ |
 | CV pago: **199 MT** por CV (valor na BD, por modelo ou padrão), marca d'água antes do pagamento, PDF limpo + DOCX editável depois | ✅ |
 | Admin: Modelos de CV (criar, editar design, duplicar, ativar/desativar, categoria, preço, imagem, ordem) | ✅ |
+| **Assistente de IA** «✨ Melhorar com IA» (resumo, objetivo, descrição de funções), sugestões de competências com prova no texto, análise da descrição da vaga — nunca inventa, nada muda sem «Aplicar sugestão», consentimento antes de enviar texto | ✅ |
 | Cartão bancário | ⏳ placeholder — requer gateway oficial |
 | Integração por API com operadores, cartas, modelos de email/WhatsApp, cupões | ⏳ Fase 2 (restante) |
 
@@ -91,6 +92,9 @@ Todas estão documentadas em [`.env.example`](./.env.example). Resumo:
 | `EMAIL_DRIVER` | não | `console` (dev) ou `resend` |
 | `EMAIL_FROM`, `RESEND_API_KEY` | se `resend` | Envio de emails |
 | `RATE_LIMIT_SCALE` | não | Multiplicador de limites (manter `1` em produção) |
+| `AI_PROVIDER` | não | `anthropic` (API oficial), `mock` (demonstração/testes, sem IA real) ou vazio (assistente indisponível) |
+| `ANTHROPIC_API_KEY`, `AI_MODEL` | se `anthropic` | Chave e ID do modelo (ver documentação do provedor). Nunca no código |
+| `AI_TIMEOUT_MS` | não | Tempo máximo de resposta da IA (predefinição 20000) |
 | `SEED_MPESA_NUMBER`, `SEED_EMOLA_NUMBER`, `SEED_MKESH_NUMBER` | não | Só usados pelo seed para criar a configuração de pagamentos inicial |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | só no `admin:create` | Remover do ambiente depois de criar a conta |
 
@@ -132,6 +136,7 @@ Cobertura principal:
 - **Biblioteca de modelos**: ≥36 modelos com designs distintos, todas as 22 categorias e 17 estilos; para **cada** modelo, HTML, PDF e DOCX mostram todos os campos (nenhum desaparece) com e sem foto, cabem em A4, e o selo ATS corresponde ao design.
 - **Fluxo de modelo único**: escolher cria/troca o CV em preparação (nunca dois por comprar), modelo fixo após a compra, preço por modelo ou padrão, pré-visualização com marca d'água só antes da compra.
 - **Fotografia**: WEBP/PNG/JPG, redução, remoção de EXIF, enquadramento igual no editor e no PDF, rota privada.
+- **Assistente de IA**: configurado / não configurado («Assistente de IA temporariamente indisponível.»), campos vazios, texto longo, caracteres especiais, dados pessoais substituídos antes do envio, consentimento, prompts maliciosos (no texto e na vaga), sugestões com empresas/números/certificações inventadas rejeitadas, e nenhuma alteração sem «Aplicar sugestão» (também em e2e).
 - **Pedidos e downloads**: produto gratuito → pedido pago de 0 MT → entrega; só quem tem pedido pago descarrega.
 - **Permissões**: USER/EDITOR/ADMIN nas ações administrativas; auditoria das alterações de preço.
 - **Pagamentos manuais**: criação do pedido e preço vindo da BD, troca de método, limites, instruções da configuração central, envio do comprovativo (→ `PENDING_VERIFICATION`, sem acesso), só ADMIN confirma (→ `PAID` + auditoria), rejeição, pedido de novo comprovativo, códigos repetidos, cancelamento, downloads de kits e de CV bloqueados até à confirmação.

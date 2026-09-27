@@ -6,6 +6,7 @@ export type CvLayoutId = "CLASSICO" | "MODERNO" | "EXECUTIVO";
 
 export const SECTION_KEYS = [
   "summary",
+  "objective",
   "experience",
   "education",
   "skills",
@@ -71,6 +72,8 @@ export type CvContent = {
   templateId: string | null;
   personal: CvPersonal;
   summary: string;
+  /** Objetivo profissional (opcional) */
+  objective: string;
   experiences: CvExperience[];
   educations: CvEducation[];
   skills: CvSkill[];
@@ -104,6 +107,7 @@ export function emptyCvContent(title = "O meu CV"): CvContent {
       showPhoto: false,
     },
     summary: "",
+    objective: "",
     experiences: [],
     educations: [],
     skills: [],

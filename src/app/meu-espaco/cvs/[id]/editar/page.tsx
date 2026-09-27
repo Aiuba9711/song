@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth/guards";
 import { formatMoney } from "@/lib/money";
 import { canDownloadCv, getCvPrice } from "@/server/checkout";
 import { designOf, getUserCv, toCvContent } from "@/server/cv";
+import { getAiStatus } from "@/server/ai";
 import { getGalleryTemplates } from "@/server/gallery";
 
 export const metadata: Metadata = { title: "Editar CV" };
@@ -14,7 +15,7 @@ export default async function EditCvPage({ params, searchParams }: { params: Pro
   const user = await requireUser(`/meu-espaco/cvs/${id}/editar`);
   const [cv, templates] = await Promise.all([getUserCv(user.id, id), getGalleryTemplates()]);
   if (!cv) notFound();
-  const [unlocked, price] = await Promise.all([canDownloadCv(user.id, cv.id), getCvPrice(cv.template?.priceMinor)]);
+  const [unlocked, price, aiStatus] = await Promise.all([canDownloadCv(user.id, cv.id), getCvPrice(cv.template?.priceMinor), getAiStatus(user.id)]);
 
   const builderTemplates: BuilderTemplate[] = [...templates];
   // Se o modelo deste CV foi desativado, mantém-no disponível para este CV.
@@ -44,6 +45,7 @@ export default async function EditCvPage({ params, searchParams }: { params: Pro
       updatedAt={cv.updatedAt.toISOString()}
       templates={builderTemplates}
       initialPhotoVersion={cv.photoKey ? cv.updatedAt.getTime() : null}
+      aiStatus={aiStatus}
       openTemplates={trocar === "1" && !cv.purchasedAt}
       purchase={{ unlocked, purchased: !!cv.purchasedAt, priceLabel: formatMoney(price.priceMinor, price.currency) }}
     />

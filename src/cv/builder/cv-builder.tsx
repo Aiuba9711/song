@@ -14,6 +14,8 @@ import { resolveDesign } from "../design";
 import { CvPreview, type PhotoCrop } from "../preview";
 import { ScaledSheet } from "../preview/scaled";
 import type { CvContent } from "../types";
+import type { AiStatus } from "@/lib/ai/types";
+import { AiAssistantProvider, AiJobPanel } from "./ai";
 import { PhotoEditor, usePhoto } from "./photo-editor";
 import {
   CertificationsStep,
@@ -48,7 +50,7 @@ const LAST = STEPS.length;
 /** Secção onde cada campo é editado (para levar o utilizador ao erro). */
 export function stepOfPath(path: string): number {
   if (path.startsWith("photoSettings")) return 2;
-  if (path.startsWith("summary")) return 3;
+  if (path.startsWith("summary") || path.startsWith("objective")) return 3;
   if (path.startsWith("experiences")) return 4;
   if (path.startsWith("educations")) return 5;
   if (path.startsWith("skills")) return 6;
@@ -97,9 +99,21 @@ type Props = {
   purchase: PurchaseState;
   /** Abrir logo a escolha de modelo (vindo de «Trocar modelo») */
   openTemplates?: boolean;
+  /** Estado do assistente de IA (indisponível se não estiver configurado) */
+  aiStatus?: AiStatus;
 };
 
-export function CvBuilder({ cvId, initial, initialStep, updatedAt, templates, initialPhotoVersion, purchase, openTemplates }: Props) {
+const AI_OFF: AiStatus = { available: false, providerLabel: "", external: false, consentGiven: false, demo: false };
+
+export function CvBuilder({ aiStatus = AI_OFF, ...props }: Props) {
+  return (
+    <AiAssistantProvider cvId={props.cvId} initialStatus={aiStatus}>
+      <Editor {...props} />
+    </AiAssistantProvider>
+  );
+}
+
+function Editor({ cvId, initial, initialStep, updatedAt, templates, initialPhotoVersion, purchase, openTemplates }: Omit<Props, "aiStatus">) {
   const [cv, setCv] = useState<CvContent>(initial);
   const [step, setStep] = useState(Math.min(Math.max(initialStep, 1), LAST));
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -347,7 +361,15 @@ export function CvBuilder({ cvId, initial, initialStep, updatedAt, templates, in
             </ol>
           </nav>
 
-          <p className="mt-5 text-sm font-semibold text-brand-700">
+          <div className="mt-5">
+            <AiJobPanel
+              cv={cv}
+              onAddSkill={(name) =>
+                set((c) => (c.skills.some((s) => s.name.toLowerCase() === name.toLowerCase()) || c.skills.length >= 40 ? c : { ...c, skills: [...c.skills, { name, level: "" }] }))
+              }
+            />
+          </div>
+          <p className="text-sm font-semibold text-brand-700">
             Secção {step} de {LAST}
           </p>
           <h1 ref={headingRef} tabIndex={-1} className="mt-1 mb-5 scroll-mt-24 text-2xl font-bold tracking-tight outline-none sm:text-3xl">

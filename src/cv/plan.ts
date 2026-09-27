@@ -14,7 +14,7 @@ export type CourseItem = { name: string; detail: string; year: string };
 export type RefItem = { name: string; role: string; contact: string };
 
 export type PlanSection =
-  | { key: "summary"; title: string; text: string }
+  | { key: "summary" | "objective"; title: string; text: string }
   | { key: "experience" | "education"; title: string; entries: Entry[] }
   | { key: "skills" | "languages"; title: string; items: NamedItem[] }
   | { key: "courses" | "certifications"; title: string; items: CourseItem[] }
@@ -44,6 +44,8 @@ function buildSection(cv: CvContent, key: SectionKey): PlanSection[] {
   switch (key) {
     case "summary":
       return [{ key, title, text: cv.summary }];
+    case "objective":
+      return [{ key, title, text: cv.objective }];
     case "experience":
       return [
         {
@@ -137,6 +139,7 @@ export function planTexts(plan: DocumentPlan): string[] {
     out.push(s.title);
     switch (s.key) {
       case "summary":
+      case "objective":
       case "custom":
         out.push(s.text);
         break;

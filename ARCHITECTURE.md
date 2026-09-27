@@ -48,8 +48,8 @@ Ver também: [DATABASE.md](./DATABASE.md), [PAYMENTS.md](./PAYMENTS.md), [SECURI
 ### 1.3 Regras de conteúdo
 
 - Nunca inventar dados do utilizador; nunca prometer emprego.
-- A IA (futura) apenas reorganiza/melhora texto fornecido pelo utilizador, com aviso
-  "Revise todas as informações antes de enviar a candidatura."
+- A IA apenas corrige, reorganiza, reduz e melhora texto fornecido pelo utilizador, com aviso
+  "Revise o conteúdo antes de utilizar. A IA não deve substituir informações verdadeiras sobre a sua experiência."
 
 ---
 
@@ -227,7 +227,7 @@ Opcional em produção: `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` (
 | mKesh (Tmcel) | **Pagamento manual** · API por integrar | Contrato e documentação técnica oficial |
 | Cartão bancário | Placeholder (`CardPaymentProvider`) | Escolha de gateway oficial em MZN |
 | Google Analytics / Meta Pixel | **Fase 3** | IDs de medição + banner de consentimento |
-| IA | **Fase 4** | Fornecedor de modelo + chave de API |
+| IA | `AIProvider` com `AnthropicProvider` (SDK oficial) e `MockAiProvider` (demonstração) | `ANTHROPIC_API_KEY` + `AI_MODEL` no ambiente |
 
 Nenhuma API de pagamento foi inventada: a interface `PaymentProvider` tem hoje o
 `ManualMobileMoneyProvider` (transferência para números configurados no admin, confirmada por um
@@ -291,3 +291,34 @@ modelo ao vivo.
 
 **Selo ATS.** `isAtsCompatible(design)`: uma coluna, cabeçalho simples, títulos em texto, entradas
 clássicas, competências em lista/linha, sem tabelas nem etiquetas. Calculado — não é escolha manual.
+
+## Assistente de IA
+
+```
+editor (cliente)                  servidor                                        provedor
+«✨ Melhorar com IA» ──► aiAssistAction ──► runAiTask ─┬─ valida (zod, limites, vazio)
+  (texto do campo,                                     ├─ consentimento (provedor externo)
+   contexto mínimo,                                    ├─ rate limit (40/h)
+   vaga opcional)                                      ├─ redact(): emails/telefones/links → ⟦TEL1⟧…
+                                                       ├─ buildPrompt(): regras fixas + <blocos> ──► AIProvider.complete()
+                                                       └─ checkResult(): esquema + anti-invenção ◄── JSON (ferramenta «responder»)
+«Aplicar sugestão» ◄── sugestão (nada é gravado) ◄──────┘
+```
+
+- **`AIProvider`** (`src/lib/ai/provider.ts`): `complete({ request, prompt, signal })`. Implementações:
+  `AnthropicProvider` (SDK oficial `@anthropic-ai/sdk`, resposta forçada por ferramenta com esquema JSON)
+  e `MockAiProvider` (regras locais, para demonstração e testes). Escolha por `AI_PROVIDER` no `.env`;
+  sem configuração → «Assistente de IA temporariamente indisponível.» e o resto do editor funciona.
+- **Tarefas**: `rewrite` (resumo, objetivo, descrição de funções; modos melhorar / corrigir português /
+  reduzir / mais objetivo; adaptar à vaga), `suggest_skills` (cada sugestão com citação do CV),
+  `analyze_job` (cargo, competências, requisitos, palavras-chave, experiência pedida, conselhos com
+  citação do CV; correspondência vaga ↔ CV calculada localmente).
+- **Anti-invenção** (`src/lib/ai/guard.ts`), igual para qualquer provedor: a sugestão é rejeitada se
+  tiver números, nomes próprios, siglas, emails ou links que não estejam no texto do utilizador (a
+  descrição da vaga **não** conta como prova); competências e conselhos precisam de uma citação real
+  do CV; itens «da vaga» têm de estar na vaga.
+- **Anti-injeção**: instruções fixas no servidor; o texto do utilizador e a vaga vão em blocos
+  delimitados que não podem ser fechados (`<`/`>` neutralizados) e são declarados como dados; a
+  verificação da resposta apanha o que um provedor «enganado» devolva.
+- **Sem alterações automáticas**: a ação devolve só a sugestão; o CV muda apenas quando o utilizador
+  clica «Aplicar sugestão» (e depois guarda). A descrição da vaga fica só no `sessionStorage`.

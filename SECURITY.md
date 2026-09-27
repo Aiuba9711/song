@@ -59,6 +59,15 @@ e todas as verificações acontecem no servidor.
 - Parâmetros de erro no URL usam **códigos** mapeados para mensagens (sem texto arbitrário refletido).
 - Storage local protegido contra path traversal.
 
+## Assistente de IA
+
+- Desligado sem configuração (`AI_PROVIDER` vazio); chave e modelo só em variáveis de ambiente.
+- **Consentimento** explícito antes do primeiro envio para um provedor externo (`User.aiConsentAt`, auditado, retirável no Perfil).
+- **Minimização**: só o texto do campo e contexto mínimo (sem nome, contactos nem foto); emails, telefones e links substituídos por marcadores antes do envio e repostos depois.
+- **Anti-injeção**: instruções fixas no servidor, dados em blocos delimitados que não podem ser fechados, resposta obrigatoriamente em JSON validado com zod.
+- **Anti-invenção**: sugestões com números, nomes, siglas, emails ou links ausentes do texto do utilizador são descartadas; competências/conselhos exigem citação real do CV.
+- Sem escrita automática: a ação nunca altera o CV. Limites de tamanho (resumo 2000, objetivo 600, descrição 2500, vaga 8000 caracteres) e **40 pedidos/hora** por utilizador. Não se guarda o texto nem a resposta; os logs de erro não incluem conteúdo.
+
 ## CSRF
 
 - **Server Actions**: o Next.js compara `Origin` com `Host`/`X-Forwarded-Host` e rejeita pedidos de outra origem.
@@ -78,6 +87,7 @@ instâncias serverless sem Redis):
 | Recuperação de senha | 3 / hora por email; 10 / hora por IP |
 | Downloads/exportações | 60 / hora por utilizador |
 | Uploads de fotos | 30 / hora por utilizador |
+| Assistente de IA | 40 pedidos / hora por utilizador |
 | Início de checkout | 20 / hora por utilizador (máx. 5 pedidos em aberto) |
 | Envio de dados de pagamento | 10 / hora por utilizador |
 

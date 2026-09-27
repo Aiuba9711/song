@@ -23,6 +23,7 @@ const PLACEHOLDER_CV: CvContent = {
     website: "",
     showPhoto: false,
   },
+  objective: "",
   summary:
     "[Escreva 3 a 4 linhas sobre si: a sua área, anos de experiência (ou formação, se for o primeiro emprego), 2 ou 3 pontos fortes e o tipo de função que procura. Seja específico e verdadeiro.]",
   experiences: [

@@ -45,11 +45,11 @@ SiteSettings (linha única "default") · Lead · RateLimitBucket
 | Modelo | Descrição |
 |---|---|
 | `CVTemplate` | Modelo da biblioteca: `slug`, `name`, `description`, `category` (22 áreas), `style`, `accentColor`, `design` (JSON `TemplateDesign`), `isAtsFriendly` (calculado do design), `priceMinor` (opcional; vazio = valor padrão de `PaymentSettings`), `previewImageUrl`/`previewImageKey`, `sortOrder`, `isActive`, `isPremium`. `layout` fica como família de base (compatibilidade). |
-| `CV` | Dados pessoais, resumo, `hiddenSections`, `referencesOnRequest`, `photoKey` (ficheiro privado, JPEG sem metadados), enquadramento `photoZoom`/`photoOffsetX`/`photoOffsetY`, `photoPosition`, `currentStep` do editor, `purchasedAt` (compra confirmada → modelo fixo). |
+| `CV` | Dados pessoais, resumo, `hiddenSections`, `referencesOnRequest`, `photoKey` (ficheiro privado, JPEG sem metadados), enquadramento `photoZoom`/`photoOffsetX`/`photoOffsetY`, `photoPosition`, `currentStep` do editor, `purchasedAt` (compra confirmada → modelo fixo), `objective` (objetivo profissional). |
 | `CVExperience`, `CVEducation` | Datas em texto livre ("Mar 2022"), `isCurrent`, descrição com marcadores. `sortOrder`. |
 | `CVSkill`, `CVLanguage`, `CVCourse`, `CVReference`, `CVCustomSection` | Listas ordenadas. `CVCourse.kind` = `COURSE` ou `CERTIFICATION`. |
 
-`User.currentCvTemplateId` guarda o modelo atual escolhido na galeria.
+`User.currentCvTemplateId` guarda o modelo atual escolhido na galeria. `User.aiConsentAt` regista o consentimento para enviar texto a um provedor de IA externo (`null` = sem consentimento; retirável no Perfil). O texto enviado à IA e as sugestões **não** são guardados; o `AuditLog` regista apenas `ai.request` com tarefa, provedor e resultado.
 
 Guardar um CV substitui todas as listas numa transação (simples e consistente com o assistente).
 

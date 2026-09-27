@@ -39,6 +39,12 @@ export default function PrivacyPage() {
         serviços (alojamento, base de dados, armazenamento de ficheiros, envio de email e, quando disponíveis, processadores de pagamento) que tratam dados apenas em
         nosso nome e para estas finalidades.
       </p>
+      <p>
+        <strong>Assistente de IA (opcional).</strong> Quando usa «Melhorar com IA», o texto que escolhe (por exemplo, o resumo ou a descrição de funções) e, se a colar, a
+        descrição de uma vaga, podem ser enviados a um provedor externo de inteligência artificial — sempre depois de pedir o seu consentimento, que pode retirar no perfil.
+        Não enviamos a sua fotografia nem o seu nome; emails, telefones e links são substituídos antes do envio. Não guardamos o texto enviado nem as sugestões, e nada é
+        alterado no seu CV sem a sua confirmação. A IA não deve inventar informação: reveja sempre as sugestões.
+      </p>
 
       <h2>4. Cookies</h2>
       <p>

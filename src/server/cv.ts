@@ -50,6 +50,7 @@ export function toCvContent(cv: CvWithRelations): CvContent {
       showPhoto: cv.showPhoto && !!cv.photoKey,
     },
     summary: cv.summary,
+    objective: cv.objective,
     experiences: cv.experiences.map(({ position, employer, location, startDate, endDate, isCurrent, description }) => ({
       position,
       employer,
@@ -209,6 +210,7 @@ export async function saveCv(userId: string, cvId: string, content: ParsedConten
         website: p.website || null,
         showPhoto: p.showPhoto && !!existing.photoKey,
         summary: content.summary,
+        objective: content.objective,
         referencesOnRequest: content.referencesOnRequest,
         hiddenSections: content.hiddenSections,
         photoZoom: ph.zoom,
@@ -294,6 +296,7 @@ export async function duplicateCv(userId: string, cvId: string) {
       photoOffsetY: cv.photoOffsetY,
       photoPosition: cv.photoPosition,
       summary: cv.summary,
+      objective: cv.objective,
       referencesOnRequest: cv.referencesOnRequest,
       hiddenSections: cv.hiddenSections,
       currentStep: cv.currentStep,

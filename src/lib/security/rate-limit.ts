@@ -38,4 +38,5 @@ export const LIMITS = {
   export: { limit: 60, window: 60 * 60 },
   upload: { limit: 30, window: 60 * 60 },
   claimFree: { limit: 10, window: 60 * 60 },
+  ai: { limit: 40, window: 60 * 60 },
 } as const;

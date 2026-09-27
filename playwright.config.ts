@@ -42,6 +42,10 @@ export default defineConfig({
       EMAIL_DRIVER: "console",
       // Todos os testes usam o mesmo IP; aumenta os limites sem os desligar.
       RATE_LIMIT_SCALE: "50",
+      // Assistente de IA em modo de demonstração (regras locais, sem rede nem chaves).
+      AI_PROVIDER: process.env.E2E_AI_PROVIDER ?? "mock",
+      // Simula um provedor externo para testar o pedido de consentimento.
+      AI_MOCK_EXTERNAL: "1",
     },
   },
 });

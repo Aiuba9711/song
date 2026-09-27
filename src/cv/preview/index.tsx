@@ -225,6 +225,7 @@ function SectionBody({ s, ctx }: { s: PlanSection; ctx: Ctx }) {
   const muted = inSide ? t.sidebar!.muted : t.muted;
   switch (s.key) {
     case "summary":
+    case "objective":
     case "custom":
       return <RichText text={s.text} t={t} color={color} />;
     case "experience":

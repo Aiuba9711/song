@@ -27,6 +27,7 @@ export const cvContentSchema = z.object({
     showPhoto: z.boolean().default(false),
   }),
   summary: text(2000),
+  objective: text(600),
   experiences: z
     .array(
       z.object({

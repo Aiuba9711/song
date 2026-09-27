@@ -21,6 +21,7 @@ export const SAMPLE_CV: CvContent = {
   },
   summary:
     "Técnica de contabilidade com 4 anos de experiência em lançamentos, reconciliações bancárias e apoio ao fecho mensal. Organizada, rigorosa com prazos e habituada a trabalhar com Primavera e Excel.",
+  objective: "",
   experiences: [
     {
       position: "Assistente de Contabilidade",
@@ -88,6 +89,7 @@ export const FULL_SAMPLE_CV: CvContent = {
     showPhoto: true,
   },
   references: [{ name: "Carlos Nhantumbo", position: "Director Financeiro", company: "Empresa Exemplo, Lda.", phone: "+258 82 000 0000", email: "carlos@exemplo.co.mz" }],
+  objective: "Integrar a equipa financeira de uma empresa em crescimento, contribuindo para relatórios fiáveis e dentro dos prazos.",
   referencesOnRequest: false,
   customSections: [{ title: "Voluntariado", content: "Apoio escolar a crianças da comunidade (2019–2020)." }],
 };

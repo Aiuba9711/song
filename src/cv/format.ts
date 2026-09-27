@@ -2,6 +2,7 @@ import type { CvContent, SectionKey } from "./types";
 
 export const SECTION_LABELS: Record<SectionKey, string> = {
   summary: "Perfil profissional",
+  objective: "Objetivo profissional",
   experience: "Experiência profissional",
   education: "Formação académica",
   skills: "Competências",
@@ -65,6 +66,8 @@ export function isSectionVisible(cv: CvContent, key: SectionKey): boolean {
   switch (key) {
     case "summary":
       return cv.summary.trim().length > 0;
+    case "objective":
+      return cv.objective.trim().length > 0;
     case "experience":
       return cv.experiences.length > 0;
     case "education":

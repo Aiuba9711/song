@@ -5,6 +5,7 @@ import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LANGUAGE_LEVELS, SECTION_LABELS, SKILL_LEVELS } from "../format";
 import type { CvContent, CvCourse, CvCustomSection, CvEducation, CvExperience, CvReference, SectionKey } from "../types";
+import { AiImprove, AiSkillSuggestions } from "./ai";
 import { ListEditor, SelectField, TextAreaField, TextField, Tip, Toggle } from "./fields";
 
 export type StepProps = {
@@ -58,6 +59,22 @@ export function SummaryStep({ cv, set, errors }: StepProps) {
         onChange={(v) => set((c) => ({ ...c, summary: v }))}
         error={errors.summary}
       />
+      <AiImprove id="summary" field="summary" text={cv.summary} context={{ jobTitle: cv.personal.jobTitle }} onApply={(v) => set((c) => ({ ...c, summary: v }))} />
+      <div className="border-t border-slate-200 pt-5">
+        <TextAreaField
+          id="objective"
+          label="Objetivo profissional"
+          optional
+          hint="1 a 2 frases sobre a função que procura. Aparece no CV logo a seguir ao perfil."
+          rows={3}
+          maxLength={600}
+          placeholder="Ex.: Integrar a equipa de atendimento de uma empresa de telecomunicações, contribuindo com a minha experiência em apoio ao cliente."
+          value={cv.objective}
+          onChange={(v) => set((c) => ({ ...c, objective: v }))}
+          error={errors.objective}
+        />
+        <AiImprove id="objective" field="objective" text={cv.objective} context={{ jobTitle: cv.personal.jobTitle }} onApply={(v) => set((c) => ({ ...c, objective: v }))} />
+      </div>
     </div>
   );
 }
@@ -102,6 +119,13 @@ export function ExperienceStep({ cv, set, errors }: StepProps) {
               value={e.description}
               onChange={(v) => update({ description: v })}
               error={errors[`experiences.${i}.description`]}
+            />
+            <AiImprove
+              id={`exp-${i}-description`}
+              field="experience_description"
+              text={e.description}
+              context={{ jobTitle: cv.personal.jobTitle, position: e.position }}
+              onApply={(v) => update({ description: v })}
             />
           </>
         )}
@@ -175,6 +199,16 @@ export function SkillsStep({ cv, set }: StepProps) {
           Adicionar
         </Button>
       </div>
+      <AiSkillSuggestions
+        cv={cv}
+        onApply={(names) =>
+          set((c) => {
+            const have = new Set(c.skills.map((s) => s.name.toLowerCase()));
+            const added = names.filter((n) => !have.has(n.toLowerCase())).map((name) => ({ name, level: "" }));
+            return { ...c, skills: [...c.skills, ...added].slice(0, 40) };
+          })
+        }
+      />
       {cv.skills.length === 0 ? (
         <p className="rounded-xl border border-dashed border-slate-300 bg-white p-5 text-center text-slate-500">Ainda não adicionou competências.</p>
       ) : (
@@ -329,7 +363,7 @@ export function ReferencesStep({ cv, set, errors }: StepProps) {
 }
 
 // ─── Secções visíveis ───────────────────────────────────
-const TOGGLEABLE: SectionKey[] = ["summary", "experience", "education", "skills", "languages", "courses", "certifications", "references", "custom"];
+const TOGGLEABLE: SectionKey[] = ["summary", "objective", "experience", "education", "skills", "languages", "courses", "certifications", "references", "custom"];
 
 export function SectionVisibility({ cv, set }: Pick<StepProps, "cv" | "set">) {
   return (
