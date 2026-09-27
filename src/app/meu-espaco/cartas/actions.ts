@@ -8,6 +8,7 @@ import { audit } from "@/lib/audit";
 import { assertUser, AuthError } from "@/lib/auth/guards";
 import { createLetter, deleteLetter, duplicateLetter, saveLetter } from "@/server/letters";
 import { DomainError } from "@/server/users";
+import { logError } from "@/lib/log";
 
 const id = z.string().min(1).max(40);
 
@@ -44,7 +45,7 @@ export async function saveLetterAction(letterId: string, content: LetterInput): 
     return { ok: true, savedAt: savedAt.toISOString() };
   } catch (error) {
     if (error instanceof AuthError || error instanceof DomainError) return { ok: false, error: error.message };
-    console.error("[letter.save]", error instanceof Error ? error.name : "erro");
+    logError("letter.save", error);
     return { ok: false, error: "Não foi possível guardar. Verifique a ligação e tente novamente." };
   }
 }

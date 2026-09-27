@@ -30,6 +30,14 @@ export async function createSession(
   await db.session.create({
     data: { tokenHash: sha256(token), userId, expiresAt, userAgent: meta.userAgent, ipHash: meta.ipHash },
   });
+  // Limpeza ocasional de sessões e links de recuperação expirados (dados que já não servem).
+  if (Math.random() < 0.05) {
+    const now = new Date();
+    await Promise.all([
+      db.session.deleteMany({ where: { expiresAt: { lt: now } } }),
+      db.passwordResetToken.deleteMany({ where: { expiresAt: { lt: now } } }),
+    ]).catch(() => undefined);
+  }
   const jar = await cookies();
   jar.set(sessionCookieName(), token, {
     httpOnly: true,

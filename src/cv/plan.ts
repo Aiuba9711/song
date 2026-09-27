@@ -1,5 +1,5 @@
 import type { TemplateDesign } from "./design";
-import { DEFAULT_SECTION_ORDER } from "./design";
+import { DEFAULT_SECTION_ORDER } from "./theme";
 import { contactItems, formatRange, isSectionVisible, joinNonEmpty, SECTION_LABELS } from "./format";
 import type { CvContent, SectionKey } from "./types";
 

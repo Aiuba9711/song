@@ -3,6 +3,7 @@ import { unstable_cache } from "next/cache";
 import type { PaymentSettings } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import type { ManualMethod } from "@/lib/payments/types";
+import { logError } from "@/lib/log";
 
 export const PAYMENT_SETTINGS_TAG = "payment-settings";
 
@@ -62,7 +63,7 @@ export const getPublicPaymentSummary = unstable_cache(
         currency: s.currency,
       };
     } catch (error) {
-      console.error("[payments] definições indisponíveis", error);
+      logError("payments.settings", error);
       return { checkoutAvailable: false, cvPaywallEnabled: false, cvPriceMinor: 19900, letterPriceMinor: 0, currency: "MZN" };
     }
   },

@@ -104,14 +104,23 @@ npx prisma migrate deploy                 # produção/CI: aplica pendentes
 npx prisma studio                         # inspeção local
 ```
 
-O esquema completo (todas as fases) foi criado na migração inicial para evitar migrações destrutivas
-mais tarde; as funcionalidades são ativadas por fases.
+As migrações estão em `prisma/migrations/` (uma por fase: esquema inicial, pagamentos manuais,
+biblioteca de CVs, IA, cartas, foto profissional, índices). Todas são **aditivas** (sem `DROP` de dados).
+Em produção usar sempre `prisma migrate deploy` (nunca `migrate dev` nem `migrate reset`).
+
+Verificar que o esquema e as migrações coincidem (sem «drift»), com uma base sombra vazia:
+
+```bash
+npx prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --script
+# (requer datasource.shadowDatabaseUrl no prisma.config.ts) → deve imprimir «This is an empty migration.»
+```
 
 ## Seed
 
 `npm run db:seed` é idempotente e **não cria utilizadores**. Cria:
 
-- 10 modelos de CV (Primeiro emprego, Administrativo, Contabilidade, RH, Saúde, Educação, Informática, Engenharia, Vendas/Marketing, Executivo);
+- 40 modelos de CV da biblioteca (`src/cv/catalog.ts`) — modelos já existentes não são alterados (edições do admin preservadas);
+- Foto Profissional: 13 fundos e 26 roupas digitais (só quando as tabelas estão vazias);
 - produtos: Modelo Gratuito (0 MT, com 2 ficheiros Word gerados), Kit Básico (199 MT), Kit Profissional (399 MT, destaque), Kit Premium (699 MT, rascunho);
 - linha `SiteSettings`;
 - linha `PaymentSettings` (números lidos de `SEED_*_NUMBER`, apenas na primeira criação; métodos ativos só se tiverem número).
@@ -124,3 +133,5 @@ Os valores iniciais são apenas dados — depois do seed, preços e conteúdos g
 - Complemento semanal: `pg_dump --format=custom "$DATABASE_URL" > backup-$(date +%F).dump`, guardado num bucket separado e cifrado.
 - Os ficheiros (S3/R2) devem ter versionamento ativo no bucket.
 - Testar a reposição periodicamente (`pg_restore` para uma base temporária).
+- Antes de cada deploy com migrações: fazer um backup (ou confirmar o PITR) e só depois `prisma migrate deploy`.
+- Fotografias e comprovativos são dados pessoais: o bucket de backup também tem de ser privado e cifrado.

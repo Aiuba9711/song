@@ -93,7 +93,7 @@ export function BackgroundForm({ id, defaults }: { id: string | null; defaults: 
           </Field>
         )}
         {kind === "IMAGE" && (
-          <Field id={`${p}-image`} label="Imagem (JPG, PNG ou WEBP, até 5 MB)" error={e.image} hint={defaults.hasImage ? "Deixe vazio para manter a imagem atual." : "Use imagens discretas e com direitos de utilização."}>
+          <Field id={`${p}-image`} label="Imagem (JPG, PNG ou WEBP, até 4 MB)" error={e.image} hint={defaults.hasImage ? "Deixe vazio para manter a imagem atual." : "Use imagens discretas e com direitos de utilização."}>
             {(a) => <Input {...a} name="image" type="file" accept="image/jpeg,image/png,image/webp" />}
           </Field>
         )}

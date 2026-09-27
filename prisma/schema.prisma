@@ -218,6 +218,8 @@ model CV {
   orderItems        OrderItem[]
 
   @@index([userId, updatedAt])
+  @@index([templateId])
+  @@index([professionalPhotoId])
 }
 
 model CVExperience {
@@ -484,6 +486,7 @@ model Order {
   @@index([userId])
   @@index([status, createdAt])
   @@index([customerEmail])
+  @@index([couponId])
 }
 
 enum OrderItemKind {
@@ -628,6 +631,10 @@ model Download {
 
   @@index([userId, createdAt])
   @@index([kind, createdAt])
+  @@index([cvId])
+  @@index([letterId])
+  @@index([photoId])
+  @@index([productFileId])
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -757,6 +764,7 @@ model AuditLog {
 
   @@index([action, createdAt])
   @@index([entityType, entityId])
+  @@index([actorId])
 }
 
 // Contadores de rate limiting (janela fixa). Partilhados entre instâncias serverless.
@@ -804,6 +812,8 @@ model ProfessionalPhoto {
   downloads  Download[]
 
   @@index([userId, createdAt])
+  @@index([backgroundId])
+  @@index([outfitId])
 }
 
 enum BackgroundCategory {

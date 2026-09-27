@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
-import { buildTheme, tintHex, type TemplateDesign, type Theme } from "../design";
+import type { TemplateDesign } from "../design";
+import { buildTheme, tintHex, type Theme } from "../theme";
 import { toBlocks } from "../format";
 import { planDocument, type Entry, type PlanSection, type Row } from "../plan";
 import type { CvContent } from "../types";

@@ -1,6 +1,7 @@
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import { logError } from "@/lib/log";
 
 type AuditInput = {
   actorId?: string | null;
@@ -25,6 +26,6 @@ export async function audit(input: AuditInput): Promise<void> {
       },
     });
   } catch (error) {
-    console.error("[audit] falha ao registar evento", input.action, error);
+    logError("audit", error, { action: input.action });
   }
 }

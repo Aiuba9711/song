@@ -10,6 +10,7 @@ import { LIMITS, rateLimit } from "@/lib/security/rate-limit";
 import { detectFileType, IMAGE_TYPES, MAX_PHOTO_BYTES } from "@/lib/storage/files";
 import { chooseTemplate, createCv, deleteCv, duplicateCv, removeCvPhoto, saveCv, setCvPhoto, setCvTemplate } from "@/server/cv";
 import { DomainError } from "@/server/users";
+import { logError } from "@/lib/log";
 
 const id = z.string().min(1).max(40);
 
@@ -71,7 +72,7 @@ export async function saveCvAction(cvId: string, content: CvContentInput, step?:
     return { ok: true, savedAt: savedAt.toISOString() };
   } catch (error) {
     if (error instanceof AuthError || error instanceof DomainError) return { ok: false, error: error.message };
-    console.error("[cv.save]", error);
+    logError("cv.save", error);
     return { ok: false, error: "Não foi possível guardar. Verifique a ligação e tente novamente." };
   }
 }
@@ -139,7 +140,7 @@ export async function uploadPhotoAction(cvId: string, formData: FormData): Promi
     return { ok: true, url: `/api/cv/${parsedId}/photo?v=${Date.now()}` };
   } catch (error) {
     if (error instanceof AuthError || error instanceof DomainError) return { ok: false, error: error.message };
-    console.error("[cv.photo]", error);
+    logError("cv.photo", error);
     return { ok: false, error: "Não foi possível enviar a fotografia." };
   }
 }

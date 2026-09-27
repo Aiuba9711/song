@@ -15,6 +15,14 @@ export async function markPaymentSucceeded(
 ) {
   const payment = await tx.payment.findUnique({ where: { id: args.paymentId }, include: { order: true } });
   if (!payment) throw new PaymentError("Pagamento não encontrado.", "NOT_FOUND");
+  // Segunda verificação (a do envio não é atómica): o mesmo código de transação nunca paga dois pedidos.
+  if (payment.transactionId) {
+    const reused = await tx.payment.findFirst({
+      where: { provider: payment.provider, transactionId: payment.transactionId, status: "SUCCEEDED", id: { not: payment.id } },
+      select: { order: { select: { number: true } } },
+    });
+    if (reused) throw new PaymentError(`O código de transação ${payment.transactionId} já confirmou o pedido ${reused.order.number}.`, "DUPLICATE_TRANSACTION");
+  }
 
   const updated = await tx.payment.updateMany({
     where: { id: payment.id, status: { in: args.fromStatuses } },

@@ -23,26 +23,35 @@ export function checkPhotoFile(file: { name: string; type: string; size: number 
   return null;
 }
 
+/** Alvo de envio: abaixo do limite de corpo das plataformas serverless (Vercel ≈ 4,5 MB). */
+const TARGET_BYTES = 3.5 * 1024 * 1024;
+
 /** Reduz para ≤ 2000 px e comprime em JPEG no próprio telemóvel (poupa dados móveis). */
 async function compress(file: File): Promise<{ blob: Blob; name: string }> {
   try {
     const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
-    const scale = Math.min(1, CLIENT_MAX_SIDE / Math.max(bitmap.width, bitmap.height));
-    if (scale === 1 && file.size < 1.5 * 1024 * 1024) {
+    const fits = Math.max(bitmap.width, bitmap.height) <= CLIENT_MAX_SIDE;
+    if (fits && file.size < 1.5 * 1024 * 1024) {
       bitmap.close();
       return { blob: file, name: file.name };
     }
     const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
     const ctx = canvas.getContext("2d");
     if (!ctx) return { blob: file, name: file.name };
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    let best: Blob | null = null;
+    // Tenta qualidade alta primeiro; baixa a qualidade/tamanho só se o ficheiro ficar grande.
+    for (const [side, quality] of [[CLIENT_MAX_SIDE, 0.9], [CLIENT_MAX_SIDE, 0.8], [1600, 0.8], [1400, 0.75]] as const) {
+      const scale = Math.min(1, side / Math.max(bitmap.width, bitmap.height));
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      best = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+      if (best && best.size <= TARGET_BYTES) break;
+    }
     bitmap.close();
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
-    return blob && blob.size < file.size ? { blob, name: "foto.jpg" } : { blob: file, name: file.name };
+    return best && best.size < file.size ? { blob: best, name: "foto.jpg" } : { blob: file, name: file.name };
   } catch {
     return { blob: file, name: file.name };
   }

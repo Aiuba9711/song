@@ -10,6 +10,7 @@ import { framePhoto, normalizePhoto } from "@/lib/photo";
 import { buildStorageKey, storage } from "@/lib/storage";
 import { getPaymentSettings } from "@/server/payments/settings";
 import { DomainError } from "@/server/users";
+import { logError } from "@/lib/log";
 
 export const MAX_CVS_PER_USER = 30;
 
@@ -379,7 +380,7 @@ export async function recordDownload(input: {
   photoId?: string;
   productFileId?: string;
 }) {
-  await db.download.create({ data: input }).catch((error) => console.error("[download] registo falhou", error));
+  await db.download.create({ data: input }).catch((error) => logError("download", error));
 }
 
 /** Nome de ficheiro amigável: CV-Ana-Maria-Machava.pdf */

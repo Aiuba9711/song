@@ -75,11 +75,11 @@ function normalizeOutfit(d: OutfitInput) {
 
 // ─── Fundos ─────────────────────────────────────────────────
 
-export const MAX_BACKGROUND_BYTES = 5 * 1024 * 1024;
+export const MAX_BACKGROUND_BYTES = 4 * 1024 * 1024; // abaixo do limite de corpo serverless (~4,5 MB)
 
 /** Valida e normaliza a imagem de fundo (JPEG ≤ 1600 px, sem metadados). */
 export async function normalizeBackgroundImage(data: Buffer): Promise<Buffer> {
-  if (data.length === 0 || data.length > MAX_BACKGROUND_BYTES) throw new DomainError("A imagem deve ter no máximo 5 MB.", "TOO_LARGE");
+  if (data.length === 0 || data.length > MAX_BACKGROUND_BYTES) throw new DomainError("A imagem deve ter no máximo 4 MB.", "TOO_LARGE");
   const type = detectFileType(data);
   if (!type || !IMAGE_TYPES.includes(type.mime)) throw new DomainError("Use uma imagem JPG, PNG ou WEBP.", "INVALID_TYPE");
   try {

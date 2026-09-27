@@ -108,6 +108,7 @@ export async function changeUserRole(actorId: string, userId: string, role: Role
 
 export async function setUserActive(actorId: string, userId: string, isActive: boolean) {
   if (actorId === userId) throw new AdminError("Não pode desativar a sua própria conta.");
+  if (!(await db.user.findUnique({ where: { id: userId }, select: { id: true } }))) throw new AdminError("Utilizador não encontrado.");
   await db.$transaction([
     db.user.update({ where: { id: userId }, data: { isActive } }),
     ...(isActive ? [] : [db.session.deleteMany({ where: { userId } })]),

@@ -21,6 +21,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "admin:create": "tsx scripts/create-admin.ts",
+    "check:prod": "tsx scripts/check-production.ts",
     "templates:previews": "tsx scripts/generate-template-previews.tsx",
     "postinstall": "prisma generate"
   },
@@ -38,7 +39,7 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "server-only": "^0.0.1",
-    "sharp": "^0.35.4",
+    "sharp": "^0.35.5",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -59,5 +60,9 @@
     "tsx": "^4.23.15",
     "typescript": "5.9",
     "vitest": "^3.2.7"
+  },
+  "overrides": {
+    "mysql2": "^3.24.4",
+    "deepmerge-ts": "^8.0.2"
   }
 }

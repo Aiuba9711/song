@@ -14,6 +14,10 @@ src/generated/
 .env
 .env.local
 .env.*.local
+# Segredos de produção/staging nunca no repositório
+.env.production
+.env.staging
+.env.development
 
 # ficheiros enviados em desenvolvimento (driver local)
 storage/

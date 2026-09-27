@@ -1,5 +1,6 @@
 import "server-only";
 import { env } from "@/lib/env";
+import { logError } from "@/lib/log";
 
 export type EmailMessage = {
   to: string;
@@ -18,7 +19,10 @@ export class ConsoleEmailProvider implements EmailProvider {
   async send(message: EmailMessage): Promise<void> {
     ConsoleEmailProvider.outbox.push(message);
     if (ConsoleEmailProvider.outbox.length > 50) ConsoleEmailProvider.outbox.shift();
-    if (process.env.NODE_ENV !== "test") {
+    if (process.env.NODE_ENV === "production") {
+      // Em produção o corpo NUNCA vai para os logs (contém links de recuperação de senha e dados pessoais).
+      console.warn(`[email:console] Email NÃO enviado (EMAIL_DRIVER=console): «${message.subject}». Configure EMAIL_DRIVER=resend.`);
+    } else if (process.env.NODE_ENV !== "test") {
       console.info(`[email:console] Para: ${message.to}\nAssunto: ${message.subject}\n\n${message.text}\n`);
     }
   }
@@ -62,7 +66,7 @@ export async function sendEmail(message: EmailMessage): Promise<boolean> {
     await emailProvider().send(message);
     return true;
   } catch (error) {
-    console.error("[email] erro ao enviar", error);
+    logError("email", error);
     return false;
   }
 }

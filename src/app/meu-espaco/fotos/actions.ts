@@ -10,6 +10,7 @@ import { LIMITS, rateLimit } from "@/lib/security/rate-limit";
 import { boxSchema, BG_REMOVAL_NOT_CONFIGURED } from "@/photo/types";
 import { createPhoto, deletePhoto, getPhoto, listPhotos, savePhotoResult, applyPhotoToCv } from "@/server/photos";
 import { DomainError } from "@/server/users";
+import { logError } from "@/lib/log";
 
 const id = z.string().min(1).max(40);
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string; code?: string };
@@ -17,7 +18,7 @@ type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string; code?
 function failure(error: unknown, fallback: string): { ok: false; error: string; code?: string } {
   if (error instanceof AuthError) return { ok: false, error: error.message, code: "AUTH" };
   if (error instanceof DomainError) return { ok: false, error: error.message, code: error.code };
-  console.error("[photo]", error instanceof Error ? error.name : "erro"); // nunca registar a imagem
+  logError("photo", error); // nunca registar a imagem
   return { ok: false, error: fallback };
 }
 

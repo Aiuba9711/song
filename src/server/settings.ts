@@ -1,6 +1,7 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
+import { logError } from "@/lib/log";
 
 export type PublicSettings = {
   siteName: string;
@@ -49,7 +50,7 @@ export const getSiteSettings = unstable_cache(
     try {
       return await readSettings();
     } catch (error) {
-      console.error("[settings] não foi possível ler as definições", error);
+      logError("settings", error);
       return EMPTY;
     }
   },

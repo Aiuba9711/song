@@ -122,6 +122,7 @@ são geridos no painel `/admin` (os `SEED_*` servem apenas para a configuração
 | `npm run db:migrate` / `npm run db:deploy` | Migrações (dev / produção) |
 | `npm run db:seed` | Dados iniciais (idempotente) |
 | `npm run admin:create` | Cria ou promove o administrador principal |
+| `npm run check:prod` | Verifica as variáveis de ambiente de produção (lê o ambiente e `.env.production`) |
 | `npx tsx scripts/generate-brand-assets.ts` | Regenera ícones PWA, favicon e imagem Open Graph |
 | `npm run templates:previews` | Regenera as imagens da galeria (`public/templates/*.jpg`) a partir do próprio motor, com dados fictícios (`CHROMIUM_PATH` se necessário) |
 
@@ -166,6 +167,9 @@ Configuração recomendada (baixo custo):
 5. Depois do primeiro deploy: `npm run db:seed` e `npm run admin:create` apontando para a base de produção.
 6. No painel `/admin`: configurar WhatsApp e redes sociais, **Definições → Pagamentos** (números, métodos ativos, instruções), carregar os ficheiros de cada kit e só então ativá-los.
 7. Configurar o email de contacto (Definições → Site): recebe o aviso de cada pagamento por verificar.
+
+Antes de publicar, validar a configuração: `npm run check:prod` (falha se faltar HTTPS, segredo
+forte, S3, Resend, ou se houver variáveis de teste). Relatório da auditoria: [AUDIT_REPORT.md](./AUDIT_REPORT.md).
 
 Checklist antes do lançamento: ver [SECURITY.md](./SECURITY.md#checklist-de-produção).
 

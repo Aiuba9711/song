@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import sharp from "sharp";
 import { z } from "zod";
 import { assertUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
@@ -107,6 +108,15 @@ export async function submitPaymentAction(orderNumber: string, _prev: ReportStat
     const type = detectFileType(data);
     if (!type || !PROOF_TYPES.includes(type.mime)) return { fieldErrors: { proof: ["Use uma imagem (JPG/PNG) ou PDF."] } };
     proof = { data, mime: type.mime, ext: type.ext };
+    // Imagens: volta a codificar sem metadados (EXIF/GPS do telemóvel de quem pagou).
+    if (type.mime !== "application/pdf") {
+      try {
+        const clean = await sharp(data, { failOn: "error", limitInputPixels: 40_000_000 }).rotate().toBuffer();
+        proof = { data: clean, mime: type.mime, ext: type.ext };
+      } catch {
+        return { fieldErrors: { proof: ["Não foi possível ler a imagem do comprovativo."] } };
+      }
+    }
   }
 
   try {

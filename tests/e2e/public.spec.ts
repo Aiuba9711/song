@@ -58,7 +58,9 @@ test.describe("páginas públicas", () => {
     expect(manifest.name).toBe("Emprego Fácil MZ");
     expect(manifest.icons.some((i: { purpose?: string }) => i.purpose === "maskable")).toBe(true);
     expect(await (await request.get("/robots.txt")).text()).toContain("Disallow: /meu-espaco");
-    expect(await (await request.get("/sitemap.xml")).text()).toContain("/kits/kit-emprego-profissional");
+    const sitemap = await (await request.get("/sitemap.xml")).text();
+    expect(sitemap).toContain("/kits/kit-emprego-profissional");
+    expect(sitemap).toContain("/cv-modelos/primeiro-emprego");
     const sw = await request.get("/sw.js");
     expect(sw.ok()).toBe(true);
     await expect.poll(() => page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.active?.state ?? null), { timeout: 15_000 }).toBe("activated");
