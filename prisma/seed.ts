@@ -10,6 +10,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { PrismaClient, type Prisma } from "../src/generated/prisma/client";
 import { CATALOG } from "../src/cv/catalog";
+import { BACKGROUND_CATALOG, OUTFIT_CATALOG } from "../src/photo/catalog";
 import { createStorage } from "../src/lib/storage/create";
 import { buildFreeCoverLetterDocx, buildFreeCvTemplateDocx } from "../src/kits/free-kit";
 import { randomUUID } from "node:crypto";
@@ -207,6 +208,15 @@ async function main() {
     update: {},
   });
   console.info("✔ definições do site");
+
+  // Foto Profissional: fundos e roupas iniciais (só se ainda não existirem — o admin gere depois).
+  if ((await db.photoBackground.count()) === 0) {
+    await db.photoBackground.createMany({ data: BACKGROUND_CATALOG.map((b, i) => ({ ...b, color2: b.color2 ?? null, pattern: b.pattern ?? null, passport: b.passport ?? false, sortOrder: (i + 1) * 10 })) });
+  }
+  if ((await db.photoOutfit.count()) === 0) {
+    await db.photoOutfit.createMany({ data: OUTFIT_CATALOG.map((o, i) => ({ ...o, jacketColor: o.jacketColor ?? null, tieColor: o.tieColor ?? null, sortOrder: (i + 1) * 10 })) });
+  }
+  console.info(`✔ foto profissional (${await db.photoBackground.count()} fundos, ${await db.photoOutfit.count()} roupas)`);
 }
 
 main()

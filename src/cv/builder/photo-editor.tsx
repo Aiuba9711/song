@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Camera, RotateCcw, Trash2 } from "lucide-react";
+import { Camera, Images, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { removePhotoAction, uploadPhotoAction } from "@/app/meu-espaco/cvs/actions";
+import { applyPhotoToCvAction, listMyPhotosAction } from "@/app/meu-espaco/fotos/actions";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -79,12 +81,44 @@ type Props = {
   showPhoto: boolean;
   setShowPhoto: (v: boolean) => void;
   design: TemplateDesign;
+  /** Foto do módulo Foto Profissional atualmente usada neste CV */
+  professionalPhotoId?: string | null;
 };
 
-export function PhotoEditor({ cvId, photo, hasPhoto, onUploaded, onRemoved, settings, onSettings, showPhoto, setShowPhoto, design }: Props) {
+type MyPhoto = { id: string; label: string; hasResult: boolean; createdAt: string };
+
+export function PhotoEditor({ cvId, photo, hasPhoto, onUploaded, onRemoved, settings, onSettings, showPhoto, setShowPhoto, design, professionalPhotoId = null }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [professional, setProfessional] = useState<string | null>(professionalPhotoId);
+  const [myPhotos, setMyPhotos] = useState<MyPhoto[] | null>(null);
+  const [paymentFor, setPaymentFor] = useState<string | null>(null);
+
+  const openMyPhotos = () =>
+    start(async () => {
+      setError(null);
+      const res = await listMyPhotosAction();
+      if (res.ok) setMyPhotos(res.photos);
+      else setError(res.error);
+    });
+
+  const chooseProfessional = (photoId: string, variant: "result" | "original") =>
+    start(async () => {
+      setError(null);
+      setPaymentFor(null);
+      const res = await applyPhotoToCvAction(photoId, cvId, variant);
+      if (res.ok) {
+        onSettings({ ...settings, ...res.framing });
+        setShowPhoto(true);
+        setProfessional(photoId);
+        setMyPhotos(null);
+        onUploaded(Date.now());
+      } else {
+        setError(res.error);
+        if (res.code === "PAYMENT_REQUIRED") setPaymentFor(photoId);
+      }
+    });
 
   const upload = (file: File) => {
     setError(null);
@@ -105,6 +139,7 @@ export function PhotoEditor({ cvId, photo, hasPhoto, onUploaded, onRemoved, sett
         // O servidor repõe o enquadramento de uma foto nova.
         onSettings({ ...DEFAULT_PHOTO_SETTINGS, position: settings.position });
         setShowPhoto(true);
+        setProfessional(null);
         onUploaded(Date.now());
       } else setError(res.error);
     });
@@ -115,6 +150,7 @@ export function PhotoEditor({ cvId, photo, hasPhoto, onUploaded, onRemoved, sett
       const res = await removePhotoAction(cvId);
       if (res.ok) {
         setShowPhoto(false);
+        setProfessional(null);
         onRemoved();
       } else setError(res.error);
     });
@@ -125,6 +161,56 @@ export function PhotoEditor({ cvId, photo, hasPhoto, onUploaded, onRemoved, sett
         A fotografia é opcional. Use uma foto recente, de frente, com fundo neutro e boa luz. A foto fica privada: só aparece no seu CV e nunca é
         publicada no site.
       </Tip>
+
+      {!design.photo && <Alert tone="info">Este modelo não mostra fotografia. Pode guardar uma foto na mesma — aparece se trocar para um modelo com fotografia.</Alert>}
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="secondary" onClick={openMyPhotos} disabled={pending} icon={<Images className="size-4" aria-hidden />}>
+            Escolher das minhas fotos profissionais
+          </Button>
+          <Link href="/meu-espaco/fotos/nova" className="text-sm font-semibold text-brand-700 underline">
+            Criar foto profissional
+          </Link>
+          {professional && (
+            <Link href={`/meu-espaco/fotos/${professional}/editar`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 underline">
+              <Pencil className="size-3.5" aria-hidden /> Editar foto profissional
+            </Link>
+          )}
+        </div>
+        {myPhotos && (
+          <div className="mt-4">
+            {myPhotos.length === 0 ? (
+              <p className="text-sm text-slate-600">Ainda não tem fotos profissionais.</p>
+            ) : (
+              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="As suas fotos profissionais">
+                {myPhotos.map((p) => (
+                  <li key={p.id} className="rounded-xl border border-slate-200 p-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- miniatura privada do próprio utilizador */}
+                    <img src={`/api/fotos/${p.id}?v=miniatura`} alt="" className="aspect-[4/5] w-full rounded-lg bg-slate-100 object-contain" loading="lazy" />
+                    <p className="mt-1 line-clamp-2 text-xs text-slate-600">{p.label}</p>
+                    <div className="mt-2 grid gap-1.5">
+                      {p.hasResult && (
+                        <Button size="sm" onClick={() => chooseProfessional(p.id, "result")} disabled={pending}>
+                          Usar editada
+                        </Button>
+                      )}
+                      <Button size="sm" variant="outline" onClick={() => chooseProfessional(p.id, "original")} disabled={pending}>
+                        Usar original
+                      </Button>
+                    </div>
+                    {paymentFor === p.id && (
+                      <Link href={`/meu-espaco/fotos/${p.id}`} className="mt-2 block text-xs font-semibold text-brand-700 underline">
+                        Ver opções de compra
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
 
       <input
         ref={input}

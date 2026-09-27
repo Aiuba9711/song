@@ -335,14 +335,15 @@ export async function setCvPhoto(userId: string, cvId: string, raw: Buffer) {
   }
   const key = buildStorageKey(`cv-photos/${userId}`, "jpg");
   await storage().put({ key, body: normalized, contentType: "image/jpeg" });
-  await db.cV.update({ where: { id: cv.id }, data: { photoKey: key, showPhoto: true, photoZoom: 1, photoOffsetX: 0, photoOffsetY: 0 } });
+  // Foto carregada diretamente: deixa de estar ligada a uma foto profissional.
+  await db.cV.update({ where: { id: cv.id }, data: { photoKey: key, showPhoto: true, photoZoom: 1, photoOffsetX: 0, photoOffsetY: 0, professionalPhotoId: null } });
   if (cv.photoKey) await storage().delete(cv.photoKey).catch(() => undefined);
 }
 
 export async function removeCvPhoto(userId: string, cvId: string) {
   const cv = await db.cV.findFirst({ where: { id: cvId, userId }, select: { id: true, photoKey: true } });
   if (!cv) throw new DomainError("CV não encontrado.", "NOT_FOUND");
-  await db.cV.update({ where: { id: cv.id }, data: { photoKey: null, showPhoto: false } });
+  await db.cV.update({ where: { id: cv.id }, data: { photoKey: null, showPhoto: false, professionalPhotoId: null } });
   if (cv.photoKey) await storage().delete(cv.photoKey).catch(() => undefined);
 }
 
@@ -371,10 +372,11 @@ export async function getCvForExport(userId: string, cvId: string) {
 
 export async function recordDownload(input: {
   userId: string;
-  kind: "CV_PDF" | "CV_DOCX" | "LETTER_PDF" | "LETTER_DOCX" | "PRODUCT_FILE";
+  kind: "CV_PDF" | "CV_DOCX" | "LETTER_PDF" | "LETTER_DOCX" | "PHOTO_JPG" | "PHOTO_PNG" | "PRODUCT_FILE";
   label: string;
   cvId?: string;
   letterId?: string;
+  photoId?: string;
   productFileId?: string;
 }) {
   await db.download.create({ data: input }).catch((error) => console.error("[download] registo falhou", error));

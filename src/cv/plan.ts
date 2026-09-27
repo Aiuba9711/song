@@ -115,7 +115,7 @@ export function planDocument(cv: CvContent, design: TemplateDesign, opts: { hasP
   }
 
   let photo: PhotoPlacement | null = null;
-  if (opts.hasPhoto && cv.personal.showPhoto) {
+  if (opts.hasPhoto && cv.personal.showPhoto && design.photo) {
     const pos = cv.photoSettings.position === "auto" ? design.photoPosition : cv.photoSettings.position;
     photo = sidebar && pos === "center" ? "sidebar" : pos;
   }

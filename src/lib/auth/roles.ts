@@ -7,6 +7,7 @@ import type { Role } from "@/generated/prisma/enums";
 export const PERMISSIONS = {
   "admin.access": ["ADMIN", "EDITOR"],
   "templates.manage": ["ADMIN", "EDITOR"],
+  "photos.manage": ["ADMIN", "EDITOR"],
   "content.manage": ["ADMIN", "EDITOR"],
   "products.manage": ["ADMIN"],
   "orders.view": ["ADMIN"],

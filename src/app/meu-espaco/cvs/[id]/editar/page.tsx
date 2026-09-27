@@ -45,6 +45,7 @@ export default async function EditCvPage({ params, searchParams }: { params: Pro
       updatedAt={cv.updatedAt.toISOString()}
       templates={builderTemplates}
       initialPhotoVersion={cv.photoKey ? cv.updatedAt.getTime() : null}
+      professionalPhotoId={cv.professionalPhotoId}
       aiStatus={aiStatus}
       openTemplates={trocar === "1" && !cv.purchasedAt}
       purchase={{ unlocked, purchased: !!cv.purchasedAt, priceLabel: formatMoney(price.priceMinor, price.currency) }}

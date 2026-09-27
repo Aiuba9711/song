@@ -74,6 +74,14 @@ e todas as verificações acontecem no servidor.
 - Links «Abrir WhatsApp»: destino fixo `https://wa.me/`, número só com dígitos (8–15, validado), texto sem caracteres invisíveis e codificado com `encodeURIComponent`; abertos com `rel="noopener noreferrer"`. O admin pode desligar o botão.
 - Texto dos utilizadores tratado sempre como texto (React escapa; o DOCX escapa XML; o PDF usa só caracteres das fontes base).
 
+## Foto Profissional
+
+- Fotografias são dados pessoais: só o dono vê/descarrega (`/api/fotos/[id]` verifica sessão e dono em cada pedido; outro utilizador recebe 404), sem cache partilhada, `noindex, nofollow, noimageindex`, sem URLs públicos.
+- Upload validado no servidor (extensão, MIME, conteúdo real, correspondência, tamanho configurável, dimensão mínima, limite de píxeis), EXIF/GPS removidos, máximo de 30 por conta, rate limit de envios, gravações e downloads.
+- O resultado gerado no navegador é revalidado (PNG real, dimensões, proporção, fundo/roupa existentes) e recodificado.
+- Nenhuma imagem é enviada a serviços externos nem usada para treinar modelos; um futuro fornecedor exige consentimento (`User.imageAiConsentAt`). Logs de erro sem imagens.
+- Eliminação a pedido (com opção de retirar dos CVs) e na eliminação da conta.
+
 ## CSRF
 
 - **Server Actions**: o Next.js compara `Origin` com `Host`/`X-Forwarded-Host` e rejeita pedidos de outra origem.

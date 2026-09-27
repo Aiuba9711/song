@@ -136,6 +136,7 @@ export async function deleteAccount(userId: string, password: string) {
   }
 
   const photos = await db.cV.findMany({ where: { userId, photoKey: { not: null } }, select: { photoKey: true } });
+  const proPhotos = await db.professionalPhoto.findMany({ where: { userId }, select: { originalKey: true, resultKey: true, thumbKey: true } });
 
   await db.$transaction([
     db.order.updateMany({
@@ -146,4 +147,7 @@ export async function deleteAccount(userId: string, password: string) {
   ]);
 
   await Promise.all(photos.map((p) => storage().delete(p.photoKey!).catch(() => undefined)));
+  // Fotos profissionais: original, resultado e miniatura.
+  const keys = proPhotos.flatMap((p) => [p.originalKey, p.resultKey, p.thumbKey]).filter((k): k is string => !!k);
+  await Promise.all(keys.map((k) => storage().delete(k).catch(() => undefined)));
 }

@@ -27,7 +27,11 @@ export default async function FailedPage({ searchParams }: { searchParams: Promi
   const retryHref =
     item?.kind === "CV_UNLOCK" && item.cvId
       ? `/checkout?cv=${item.cvId}`
-      : item?.kind === "LETTER_UNLOCK" && item.letterId
+      : item?.kind === "PHOTO_UNLOCK" && item.photoId
+        ? `/checkout?foto=${item.photoId}`
+        : item?.kind === "CV_PHOTO_BUNDLE" && item.cvId && item.photoId
+          ? `/checkout?pacote=${item.cvId}.${item.photoId}`
+          : item?.kind === "LETTER_UNLOCK" && item.letterId
         ? `/checkout?carta=${item.letterId}`
         : item?.product?.slug
           ? `/checkout?produto=${item.product.slug}`

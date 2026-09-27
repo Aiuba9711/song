@@ -13,7 +13,7 @@ Pensada para smartphones Android e internet limitada.
 
 ---
 
-## Estado atual — Fase 1 (MVP) ✅ · Pagamentos manuais ✅ · Biblioteca de CVs ✅
+## Estado atual — Fase 1 (MVP) ✅ · Pagamentos manuais ✅ · Biblioteca de CVs ✅ · Foto Profissional ✅
 
 | Funcionalidade | Estado |
 |---|---|
@@ -39,8 +39,10 @@ Pensada para smartphones Android e internet limitada.
 | **Cartas** de candidatura e de motivação: gerar a partir dos dados (nome, empresa, cargo, formação, experiência, competências, motivação, contacto), editar, copiar, PDF e Word | ✅ |
 | **Modelos de email** (candidatura, espontânea, envio de CV, acompanhamento, agradecimento, resposta a recrutador) com «Copiar email» | ✅ |
 | **Mensagens de WhatsApp** curtas com «Copiar mensagem» e «Abrir WhatsApp» (link wa.me seguro, indicativo configurável no admin) | ✅ |
-| Preços na base de dados: CV (199 MT, por modelo ou padrão), carta (configurável; 0 = grátis), kits (por produto) | ✅ |
+| Preços na base de dados: CV (199 MT, por modelo ou padrão), carta (configurável; 0 = grátis), foto profissional e pacote CV + Foto (configuráveis, com promoção), kits (por produto) | ✅ |
 | **Assistente de IA** «✨ Melhorar com IA» (resumo, objetivo, descrição de funções, cartas, emails e WhatsApp), sugestões de competências com prova no texto, análise da descrição da vaga — nunca inventa, nada muda sem «Aplicar sugestão», consentimento antes de enviar texto | ✅ |
+| **Foto Profissional** (`/meu-espaco/fotos`): carregar (câmara, galeria, arrastar), ajustar (zoom, mover, rodar, brilho, contraste, exposição, saturação, nitidez, melhoria automática), formatos (tipo passe, CV, quadrada, personalizada), fundos lisos/corporativos/gradientes, roupa digital (ilustração identificada como edição digital), centralizar automaticamente, antes/depois, usar no CV, JPG/PNG/tipo passe/para CV, eliminar — ver [PHOTO_MODULE.md](./PHOTO_MODULE.md) | ✅ (processamento local, sem IA) |
+| Remoção automática de fundo / roupa gerada por serviço externo | ⏳ arquitetura pronta (providers); nenhum serviço externo configurado |
 | Cartão bancário | ⏳ placeholder — requer gateway oficial |
 | Integração por API com operadores, cartas, modelos de email/WhatsApp, cupões | ⏳ Fase 2 (restante) |
 
@@ -99,6 +101,9 @@ Todas estão documentadas em [`.env.example`](./.env.example). Resumo:
 | `AI_PROVIDER` | não | `anthropic` (API oficial), `mock` (demonstração/testes, sem IA real) ou vazio (assistente indisponível) |
 | `ANTHROPIC_API_KEY`, `AI_MODEL` | se `anthropic` | Chave e ID do modelo (ver documentação do provedor). Nunca no código |
 | `AI_TIMEOUT_MS` | não | Tempo máximo de resposta da IA (predefinição 20000) |
+| `APP_ENV` | não | `development`, `staging` ou `production` (vazio = segue `NODE_ENV`) |
+| `PHOTO_MAX_UPLOAD_MB` | não | Tamanho máximo de envio de fotografias (1–25 MB; predefinição 10) |
+| `IMAGE_BG_PROVIDER`, `IMAGE_CLOTHING_PROVIDER` | não | Serviços externos de imagem — **nenhum implementado**; deixar vazios (ver PHOTO_MODULE.md) |
 | `SEED_MPESA_NUMBER`, `SEED_EMOLA_NUMBER`, `SEED_MKESH_NUMBER` | não | Só usados pelo seed para criar a configuração de pagamentos inicial |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | só no `admin:create` | Remover do ambiente depois de criar a conta |
 

@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BadgeDollarSign, FileStack, LayoutDashboard, Package, Receipt, ScrollText, Settings, Users } from "lucide-react";
+import { BadgeDollarSign, Camera, FileStack, LayoutDashboard, Package, Receipt, ScrollText, Settings, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const ICONS = { payments: BadgeDollarSign, dashboard: LayoutDashboard, products: Package, orders: Receipt, users: Users, templates: FileStack, settings: Settings, audit: ScrollText };
+const ICONS = { payments: BadgeDollarSign, dashboard: LayoutDashboard, products: Package, orders: Receipt, users: Users, templates: FileStack, settings: Settings, audit: ScrollText, photos: Camera };
 export type AdminNavItem = { href: string; label: string; icon: keyof typeof ICONS; count?: number };
 
 export function AdminNav({ items }: { items: AdminNavItem[] }) {

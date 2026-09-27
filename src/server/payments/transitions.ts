@@ -32,6 +32,12 @@ export async function markPaymentSucceeded(
   const cvItems = await tx.orderItem.findMany({ where: { orderId: payment.orderId, kind: "CV_UNLOCK", cvId: { not: null } }, select: { cvId: true } });
   if (cvItems.length) await tx.cV.updateMany({ where: { id: { in: cvItems.map((i) => i.cvId!) }, purchasedAt: null }, data: { purchasedAt: new Date() } });
   const letterItems = await tx.orderItem.findMany({ where: { orderId: payment.orderId, kind: "LETTER_UNLOCK", letterId: { not: null } }, select: { letterId: true } });
+  // Foto profissional (sozinha ou no pacote CV + Foto) e o CV do pacote.
+  const photoItems = await tx.orderItem.findMany({ where: { orderId: payment.orderId, kind: { in: ["PHOTO_UNLOCK", "CV_PHOTO_BUNDLE"] } }, select: { photoId: true, cvId: true, kind: true } });
+  const photoIds = photoItems.map((i) => i.photoId).filter((v): v is string => !!v);
+  const bundleCvIds = photoItems.filter((i) => i.kind === "CV_PHOTO_BUNDLE" && i.cvId).map((i) => i.cvId!);
+  if (photoIds.length) await tx.professionalPhoto.updateMany({ where: { id: { in: photoIds }, purchasedAt: null }, data: { purchasedAt: new Date() } });
+  if (bundleCvIds.length) await tx.cV.updateMany({ where: { id: { in: bundleCvIds }, purchasedAt: null }, data: { purchasedAt: new Date() } });
   if (letterItems.length) await tx.coverLetter.updateMany({ where: { id: { in: letterItems.map((i) => i.letterId!) }, purchasedAt: null }, data: { purchasedAt: new Date() } });
 
   await tx.auditLog.create({

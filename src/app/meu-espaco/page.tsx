@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, FilePlus2, FileText, Mail, MessageSquareText, Package, Sparkles } from "lucide-react";
+import { ArrowRight, Camera, FilePlus2, FileText, Mail, MessageSquareText, Package, Sparkles } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -67,6 +67,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <div>
               <p className="font-semibold">Email e WhatsApp</p>
               <p className="text-sm text-slate-600">Modelos prontos a copiar</p>
+            </div>
+          </Card>
+        </Link>
+        <Link href="/meu-espaco/fotos" className="group">
+          <Card className="flex h-full items-center gap-4 p-5 transition-shadow group-hover:shadow-lift">
+            <Camera className="size-8 shrink-0 text-brand-700" aria-hidden />
+            <div>
+              <p className="font-semibold">Foto Profissional</p>
+              <p className="text-sm text-slate-600">Prepare a sua fotografia para o CV</p>
             </div>
           </Card>
         </Link>

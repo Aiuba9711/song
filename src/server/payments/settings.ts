@@ -24,6 +24,10 @@ export async function getPaymentSettings(): Promise<PaymentSettings> {
       defaultPriceMinor: 19900,
       cvPaywallEnabled: false,
       letterPriceMinor: 0,
+      photoPriceMinor: 0,
+      photoPromoPriceMinor: null,
+      photoPromoEndsAt: null,
+      photoBundlePriceMinor: null,
       cardEnabled: false,
       updatedAt: new Date(0),
     }

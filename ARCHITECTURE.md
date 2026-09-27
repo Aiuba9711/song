@@ -336,3 +336,17 @@ editor (cliente)                  servidor                                      
   validado (8–15 dígitos, indicativo do admin quando falta), texto limpo e codificado.
 - **IA**: os mesmos `AiImprove`/`runAiTask` do CV, com os campos `letter_body`, `email_body` e
   `whatsapp_message`; os dados do formulário vão em `context.facts` e são a única prova aceite.
+
+## Foto Profissional
+
+Detalhes em [PHOTO_MODULE.md](./PHOTO_MODULE.md). Resumo:
+
+- `src/photo/`: funções puras (geometria, ajustes de píxeis, máscara de fundo liso, roupa em SVG) e o
+  editor por etapas, que desenha em `<canvas>` no navegador. O servidor valida e volta a codificar o
+  resultado (`src/server/photos.ts`).
+- `src/lib/image-editing/`: `BackgroundRemovalProvider`, `ClothingProvider`, `ImageEditingProvider`;
+  hoje só a implementação local (sharp, sem IA). Serviços externos: nenhum implementado; estado
+  visível no admin; `APP_ENV` separa DEV / STAGING / PRODUCTION.
+- Páginas: `/meu-espaco/fotos`, `/nova`, `/[id]`, `/[id]/editar`; imagens privadas em `/api/fotos/[id]`;
+  admin em `/admin/foto` (processadores, fundos, roupas, preços).
+- Compra pelo checkout existente (`PHOTO_UNLOCK`, `CV_PHOTO_BUNDLE`).

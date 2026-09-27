@@ -96,6 +96,8 @@ type Props = {
   templates: BuilderTemplate[];
   /** Versão da fotografia guardada (null = sem fotografia) */
   initialPhotoVersion: number | null;
+  /** Foto profissional usada neste CV (módulo Foto Profissional), se houver */
+  professionalPhotoId?: string | null;
   purchase: PurchaseState;
   /** Abrir logo a escolha de modelo (vindo de «Trocar modelo») */
   openTemplates?: boolean;
@@ -113,7 +115,7 @@ export function CvBuilder({ aiStatus = AI_OFF, ...props }: Props) {
   );
 }
 
-function Editor({ cvId, initial, initialStep, updatedAt, templates, initialPhotoVersion, purchase, openTemplates }: Omit<Props, "aiStatus">) {
+function Editor({ cvId, initial, initialStep, updatedAt, templates, initialPhotoVersion, professionalPhotoId, purchase, openTemplates }: Omit<Props, "aiStatus">) {
   const [cv, setCv] = useState<CvContent>(initial);
   const [step, setStep] = useState(Math.min(Math.max(initialStep, 1), LAST));
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -401,6 +403,7 @@ function Editor({ cvId, initial, initialStep, updatedAt, templates, initialPhoto
                 showPhoto={cv.personal.showPhoto}
                 setShowPhoto={(showPhoto) => set((c) => ({ ...c, personal: { ...c.personal, showPhoto } }))}
                 design={design}
+                professionalPhotoId={professionalPhotoId ?? null}
               />
             )}
             {step === 3 && <SummaryStep {...stepProps} />}

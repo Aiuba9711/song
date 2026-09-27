@@ -19,6 +19,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     ...(can(user.role, "orders.view") ? [{ href: "/admin/pedidos", label: "Pedidos", icon: "orders" } as const] : []),
     ...(can(user.role, "users.manage") ? [{ href: "/admin/utilizadores", label: "Utilizadores", icon: "users" } as const] : []),
     ...(can(user.role, "templates.manage") ? [{ href: "/admin/modelos", label: "Modelos de CV", icon: "templates" } as const] : []),
+    ...(can(user.role, "photos.manage") ? [{ href: "/admin/foto", label: "Foto Profissional", icon: "photos" } as const] : []),
     ...(can(user.role, "settings.manage") ? [{ href: "/admin/definicoes", label: "Definições", icon: "settings" } as const] : []),
     ...(can(user.role, "users.manage") ? [{ href: "/admin/auditoria", label: "Auditoria", icon: "audit" } as const] : []),
   ];

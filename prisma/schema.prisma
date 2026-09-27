@@ -27,36 +27,38 @@ enum Role {
 }
 
 model User {
-  id               String    @id @default(cuid())
-  email            String    @unique // sempre em minúsculas
-  passwordHash     String
-  name             String
-  phone            String?
-  role             Role      @default(USER)
-  locale           String    @default("pt-MZ")
-  emailVerifiedAt  DateTime?
-  termsAcceptedAt  DateTime
-  marketingConsent Boolean   @default(false)
-  isActive         Boolean   @default(true)
+  id                  String    @id @default(cuid())
+  email               String    @unique // sempre em minúsculas
+  passwordHash        String
+  name                String
+  phone               String?
+  role                Role      @default(USER)
+  locale              String    @default("pt-MZ")
+  emailVerifiedAt     DateTime?
+  termsAcceptedAt     DateTime
+  marketingConsent    Boolean   @default(false)
+  isActive            Boolean   @default(true)
   currentCvTemplateId String? // modelo escolhido para o CV em preparação
   aiConsentAt         DateTime? // consentimento para enviar texto a um provedor de IA externo (null = sem consentimento)
-  lastLoginAt      DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  imageAiConsentAt    DateTime? // consentimento para enviar FOTOGRAFIAS a um serviço externo de edição (null = sem consentimento)
+  lastLoginAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  currentCvTemplate CVTemplate? @relation("CurrentCvTemplate", fields: [currentCvTemplateId], references: [id], onDelete: SetNull)
-  profile        Profile?
-  sessions       Session[]
-  passwordResets PasswordResetToken[]
-  cvs            CV[]
-  coverLetters   CoverLetter[]
-  documents      Document[]
-  orders         Order[]
-  downloads      Download[]
-  affiliate      Affiliate?
-  blogPosts      BlogPost[]
-  auditLogs      AuditLog[]
-  paymentReviews Payment[]            @relation("PaymentReviews")
+  currentCvTemplate CVTemplate?          @relation("CurrentCvTemplate", fields: [currentCvTemplateId], references: [id], onDelete: SetNull)
+  profile           Profile?
+  sessions          Session[]
+  passwordResets    PasswordResetToken[]
+  cvs               CV[]
+  coverLetters      CoverLetter[]
+  photos            ProfessionalPhoto[]
+  documents         Document[]
+  orders            Order[]
+  downloads         Download[]
+  affiliate         Affiliate?
+  blogPosts         BlogPost[]
+  auditLogs         AuditLog[]
+  paymentReviews    Payment[]            @relation("PaymentReviews")
 
   @@index([createdAt])
 }
@@ -170,48 +172,50 @@ model CVTemplate {
 }
 
 model CV {
-  id           String    @id @default(cuid())
-  userId       String
-  templateId   String?
-  title        String // nome interno, ex.: "CV — Contabilista"
-  locale       String    @default("pt-MZ")
+  id                  String    @id @default(cuid())
+  userId              String
+  templateId          String?
+  title               String // nome interno, ex.: "CV — Contabilista"
+  locale              String    @default("pt-MZ")
   // Dados pessoais
-  fullName     String    @default("")
-  jobTitle     String    @default("")
-  email        String    @default("")
-  phone        String    @default("")
-  location     String    @default("")
-  nationality  String?
-  birthDate    String? // texto livre opcional (não obrigatório em candidaturas)
-  linkedin     String?
-  website      String?
-  photoKey     String? // chave no StorageProvider (privado) — imagem já comprimida, sem EXIF
-  showPhoto    Boolean   @default(false)
-  photoZoom    Float     @default(1) // enquadramento: 1–3
-  photoOffsetX Float     @default(0) // -1 (esquerda) … 1 (direita)
-  photoOffsetY Float     @default(0) // -1 (cima) … 1 (baixo)
-  photoPosition String? // null = posição do modelo; "left" | "right" | "center"
-  purchasedAt  DateTime? // CV comprado (download final libertado; modelo fixo)
+  fullName            String    @default("")
+  jobTitle            String    @default("")
+  email               String    @default("")
+  phone               String    @default("")
+  location            String    @default("")
+  nationality         String?
+  birthDate           String? // texto livre opcional (não obrigatório em candidaturas)
+  linkedin            String?
+  website             String?
+  photoKey            String? // chave no StorageProvider (privado) — imagem já comprimida, sem EXIF
+  showPhoto           Boolean   @default(false)
+  photoZoom           Float     @default(1) // enquadramento: 1–3
+  photoOffsetX        Float     @default(0) // -1 (esquerda) … 1 (direita)
+  photoOffsetY        Float     @default(0) // -1 (cima) … 1 (baixo)
+  photoPosition       String? // null = posição do modelo; "left" | "right" | "center"
+  purchasedAt         DateTime? // CV comprado (download final libertado; modelo fixo)
   // Conteúdo
-  summary      String    @default("")
-  objective    String    @default("") // objetivo profissional (opcional)
-  referencesOnRequest Boolean @default(false)
-  hiddenSections String[] @default([]) // secções opcionais ocultas
-  currentStep  Int       @default(1)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  summary             String    @default("")
+  objective           String    @default("") // objetivo profissional (opcional)
+  professionalPhotoId String? // foto profissional usada (a imagem do CV é uma cópia própria em photoKey)
+  referencesOnRequest Boolean   @default(false)
+  hiddenSections      String[]  @default([]) // secções opcionais ocultas
+  currentStep         Int       @default(1)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  template       CVTemplate?       @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  experiences    CVExperience[]
-  educations     CVEducation[]
-  skills         CVSkill[]
-  languages      CVLanguage[]
-  courses        CVCourse[]
-  references     CVReference[]
-  customSections CVCustomSection[]
-  downloads      Download[]
-  orderItems     OrderItem[]
+  professionalPhoto ProfessionalPhoto? @relation(fields: [professionalPhotoId], references: [id], onDelete: SetNull)
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template          CVTemplate?        @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  experiences       CVExperience[]
+  educations        CVEducation[]
+  skills            CVSkill[]
+  languages         CVLanguage[]
+  courses           CVCourse[]
+  references        CVReference[]
+  customSections    CVCustomSection[]
+  downloads         Download[]
+  orderItems        OrderItem[]
 
   @@index([userId, updatedAt])
 }
@@ -284,9 +288,9 @@ model CVCourse {
   cvId        String
   kind        CourseKind @default(COURSE)
   name        String
-  institution String @default("")
-  year        String @default("")
-  sortOrder   Int    @default(0)
+  institution String     @default("")
+  year        String     @default("")
+  sortOrder   Int        @default(0)
 
   cv CV @relation(fields: [cvId], references: [id], onDelete: Cascade)
 
@@ -330,25 +334,25 @@ enum CoverLetterType {
 }
 
 model CoverLetter {
-  id             String          @id @default(cuid())
-  userId         String
-  type           CoverLetterType
-  title          String
-  senderName     String          @default("")
-  senderContact  String          @default("")
-  recipientName  String          @default("")
-  company        String          @default("")
-  position       String          @default("")
-  experience     String          @default("")
-  education      String          @default("")
-  skills         String          @default("")
-  motivation     String          @default("")
-  city           String          @default("") // local que aparece na data (ex.: Maputo)
-  subject        String          @default("") // assunto da carta
-  body           String          @default("") // texto final editado pelo utilizador
-  purchasedAt    DateTime? // compra confirmada (quando a carta é paga)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id            String          @id @default(cuid())
+  userId        String
+  type          CoverLetterType
+  title         String
+  senderName    String          @default("")
+  senderContact String          @default("")
+  recipientName String          @default("")
+  company       String          @default("")
+  position      String          @default("")
+  experience    String          @default("")
+  education     String          @default("")
+  skills        String          @default("")
+  motivation    String          @default("")
+  city          String          @default("") // local que aparece na data (ex.: Maputo)
+  subject       String          @default("") // assunto da carta
+  body          String          @default("") // texto final editado pelo utilizador
+  purchasedAt   DateTime? // compra confirmada (quando a carta é paga)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   orderItems OrderItem[]
@@ -486,6 +490,8 @@ enum OrderItemKind {
   PRODUCT // kit/produto digital
   CV_UNLOCK // desbloqueio do download de um CV do utilizador
   LETTER_UNLOCK // desbloqueio do download de uma carta do utilizador
+  PHOTO_UNLOCK // desbloqueio de uma foto profissional (download e uso no CV)
+  CV_PHOTO_BUNDLE // pacote CV + Foto profissional (desbloqueia os dois)
 }
 
 model OrderItem {
@@ -495,19 +501,22 @@ model OrderItem {
   productId      String?
   cvId           String?
   letterId       String?
+  photoId        String?
   productName    String // cópia no momento da compra
   unitPriceMinor Int
   quantity       Int           @default(1)
 
-  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
-  cv      CV?          @relation(fields: [cvId], references: [id], onDelete: SetNull)
-  letter  CoverLetter? @relation(fields: [letterId], references: [id], onDelete: SetNull)
+  order   Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product?           @relation(fields: [productId], references: [id], onDelete: SetNull)
+  cv      CV?                @relation(fields: [cvId], references: [id], onDelete: SetNull)
+  letter  CoverLetter?       @relation(fields: [letterId], references: [id], onDelete: SetNull)
+  photo   ProfessionalPhoto? @relation(fields: [photoId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
   @@index([productId])
   @@index([cvId])
   @@index([letterId])
+  @@index([photoId])
 }
 
 enum PaymentProviderId {
@@ -571,19 +580,19 @@ model Payment {
 }
 
 model Coupon {
-  id               String    @id @default(cuid())
-  code             String    @unique // maiúsculas, ex.: EMPREGOMZ10
-  description      String?
-  percentOff       Int? // 1–100
-  amountOffMinor   Int?
-  currency         String    @default("MZN")
-  validFrom        DateTime?
-  validUntil       DateTime?
-  maxRedemptions   Int?
-  timesRedeemed    Int       @default(0)
-  isActive         Boolean   @default(true)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  code           String    @unique // maiúsculas, ex.: EMPREGOMZ10
+  description    String?
+  percentOff     Int? // 1–100
+  amountOffMinor Int?
+  currency       String    @default("MZN")
+  validFrom      DateTime?
+  validUntil     DateTime?
+  maxRedemptions Int?
+  timesRedeemed  Int       @default(0)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   products Product[] @relation("CouponProducts") // vazio = todos os produtos
   orders   Order[]
@@ -594,6 +603,8 @@ enum DownloadKind {
   CV_DOCX
   LETTER_PDF
   LETTER_DOCX
+  PHOTO_JPG
+  PHOTO_PNG
   PRODUCT_FILE
 }
 
@@ -605,13 +616,15 @@ model Download {
   cvId          String?
   productFileId String?
   letterId      String?
+  photoId       String?
   label         String // nome apresentado no histórico
   createdAt     DateTime     @default(now())
 
-  user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  cv          CV?          @relation(fields: [cvId], references: [id], onDelete: SetNull)
-  productFile ProductFile? @relation(fields: [productFileId], references: [id], onDelete: SetNull)
-  letter      CoverLetter? @relation(fields: [letterId], references: [id], onDelete: SetNull)
+  user        User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cv          CV?                @relation(fields: [cvId], references: [id], onDelete: SetNull)
+  productFile ProductFile?       @relation(fields: [productFileId], references: [id], onDelete: SetNull)
+  letter      CoverLetter?       @relation(fields: [letterId], references: [id], onDelete: SetNull)
+  photo       ProfessionalPhoto? @relation(fields: [photoId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([kind, createdAt])
@@ -687,42 +700,47 @@ model BlogPost {
 
 // Linha única (id = "default"), editável no painel admin.
 model SiteSettings {
-  id              String   @id @default("default")
-  siteName        String   @default("Emprego Fácil MZ")
-  whatsappNumber  String? // formato internacional sem "+", ex.: 258840000000
-  whatsappMessage String?
+  id                   String   @id @default("default")
+  siteName             String   @default("Emprego Fácil MZ")
+  whatsappNumber       String? // formato internacional sem "+", ex.: 258840000000
+  whatsappMessage      String?
   // Modelos de mensagem WhatsApp dos utilizadores: indicativo usado quando o número
   // não o tem, e se o botão «Abrir WhatsApp» está disponível.
-  whatsappCountryCode  String  @default("258")
-  whatsappLinksEnabled Boolean @default(true)
-  contactEmail    String?
-  contactPhone    String?
-  facebookUrl     String?
-  instagramUrl    String?
-  tiktokUrl       String?
-  linkedinUrl     String?
-  supportHours    String?
-  updatedAt       DateTime @updatedAt
+  whatsappCountryCode  String   @default("258")
+  whatsappLinksEnabled Boolean  @default(true)
+  contactEmail         String?
+  contactPhone         String?
+  facebookUrl          String?
+  instagramUrl         String?
+  tiktokUrl            String?
+  linkedinUrl          String?
+  supportHours         String?
+  updatedAt            DateTime @updatedAt
 }
 
 // Configuração central de pagamentos (linha única "default"), editável em
 // Admin > Definições > Pagamentos. Os números de pagamento NÃO estão no código.
 model PaymentSettings {
-  id                String   @id @default("default")
-  mpesaEnabled      Boolean  @default(false)
-  mpesaNumber       String? // número nacional, ex.: 84XXXXXXX
-  emolaEnabled      Boolean  @default(false)
-  emolaNumber       String?
-  mkeshEnabled      Boolean  @default(false)
-  mkeshNumber       String?
-  accountHolderName String? // nome do titular apresentado ao cliente (opcional)
-  instructions      String   @default("")
-  currency          String   @default("MZN")
-  defaultPriceMinor Int      @default(19900) // preço do desbloqueio de download de um CV
-  cvPaywallEnabled  Boolean  @default(true) // exigir pagamento para descarregar CVs (cada CV profissional)
-  letterPriceMinor  Int      @default(0) // preço do download (PDF/DOCX) de uma carta; 0 = gratuito
-  cardEnabled       Boolean  @default(false) // só pode ser ativado com um gateway oficial configurado
-  updatedAt         DateTime @updatedAt
+  id                    String    @id @default("default")
+  mpesaEnabled          Boolean   @default(false)
+  mpesaNumber           String? // número nacional, ex.: 84XXXXXXX
+  emolaEnabled          Boolean   @default(false)
+  emolaNumber           String?
+  mkeshEnabled          Boolean   @default(false)
+  mkeshNumber           String?
+  accountHolderName     String? // nome do titular apresentado ao cliente (opcional)
+  instructions          String    @default("")
+  currency              String    @default("MZN")
+  defaultPriceMinor     Int       @default(19900) // preço do desbloqueio de download de um CV
+  cvPaywallEnabled      Boolean   @default(true) // exigir pagamento para descarregar CVs (cada CV profissional)
+  letterPriceMinor      Int       @default(0) // preço do download (PDF/DOCX) de uma carta; 0 = gratuito
+  // Foto profissional: 0 = gratuita. Pacote CV + Foto: null = pacote desativado.
+  photoPriceMinor       Int       @default(0)
+  photoPromoPriceMinor  Int? // preço promocional (opcional)
+  photoPromoEndsAt      DateTime? // fim da promoção
+  photoBundlePriceMinor Int?
+  cardEnabled           Boolean   @default(false) // só pode ser ativado com um gateway oficial configurado
+  updatedAt             DateTime  @updatedAt
 }
 
 model AuditLog {
@@ -748,4 +766,110 @@ model RateLimitBucket {
   resetAt DateTime
 
   @@index([resetAt])
+}
+
+// ─── Foto Profissional ─────────────────────────────────────
+// As fotografias são dados pessoais: guardadas em armazenamento PRIVADO, servidas só ao dono,
+// nunca usadas para treinar modelos. Ver PHOTO_MODULE.md.
+
+enum PhotoFormat {
+  PASSE // proporção 7:9 (tipo passe)
+  CV // 4:5 (retrato profissional)
+  QUADRADA // 1:1 (perfil)
+  PERSONALIZADA
+}
+
+model ProfessionalPhoto {
+  id           String      @id @default(cuid())
+  userId       String
+  originalKey  String // original normalizada (sem metadados EXIF/GPS)
+  resultKey    String? // resultado final (PNG) guardado pelo editor
+  thumbKey     String? // miniatura (JPEG) para a galeria
+  format       PhotoFormat @default(CV)
+  width        Int?
+  height       Int?
+  settings     Json? // estado do editor, para voltar a editar
+  backgroundId String?
+  outfitId     String?
+  styleLabel   String      @default("") // descrição do resultado (ex.: «Fundo branco · Blazer azul-marinho»)
+  purchasedAt  DateTime? // quando a foto é paga
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  background PhotoBackground? @relation(fields: [backgroundId], references: [id], onDelete: SetNull)
+  outfit     PhotoOutfit?     @relation(fields: [outfitId], references: [id], onDelete: SetNull)
+  cvs        CV[]
+  orderItems OrderItem[]
+  downloads  Download[]
+
+  @@index([userId, createdAt])
+}
+
+enum BackgroundCategory {
+  NEUTRO
+  CORPORATIVO
+  GRADIENTE
+}
+
+enum BackgroundKind {
+  SOLID // cor única (color1)
+  GRADIENT // gradiente vertical color1 → color2
+  PATTERN // cenário desfocado desenhado pela aplicação (pattern)
+  IMAGE // imagem carregada no admin (imageKey)
+}
+
+model PhotoBackground {
+  id        String              @id @default(cuid())
+  name      String
+  category  BackgroundCategory
+  kind      BackgroundKind
+  color1    String              @default("#ffffff")
+  color2    String?
+  pattern   String? // "office" | "wall" | "studio"
+  imageKey  String?
+  /**
+   * Adequado para foto tipo passe (fundos lisos e claros)
+   */
+  passport  Boolean             @default(false)
+  isActive  Boolean             @default(true)
+  sortOrder Int                 @default(0)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  photos    ProfessionalPhoto[]
+
+  @@index([isActive, sortOrder])
+}
+
+enum OutfitGender {
+  MASCULINO
+  FEMININO
+}
+
+enum OutfitGarment {
+  BLAZER // blazer/casaco com camisa ou blusa
+  FATO // fato completo
+  CAMISA // só camisa
+  BLUSA // só blusa
+}
+
+model PhotoOutfit {
+  id          String              @id @default(cuid())
+  name        String
+  gender      OutfitGender
+  garment     OutfitGarment
+  jacketColor String? // null = sem casaco
+  shirtColor  String
+  tieColor    String? // gravata sugerida (o utilizador pode tirar/trocar)
+  /**
+   * Estilos: CORPORATIVO, EXECUTIVO, PRIMEIRO_EMPREGO, ENTREVISTA, ACADEMICO
+   */
+  tags        String[]            @default([])
+  isActive    Boolean             @default(true)
+  sortOrder   Int                 @default(0)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  photos      ProfessionalPhoto[]
+
+  @@index([isActive, sortOrder])
 }

@@ -23,7 +23,7 @@ import { CheckoutSteps } from "./steps";
 
 export const metadata: Metadata = { title: "Pagamento" };
 
-type Search = { produto?: string; cv?: string; carta?: string; pedido?: string };
+type Search = { produto?: string; cv?: string; carta?: string; foto?: string; pacote?: string; pedido?: string };
 
 export default async function CheckoutPage({ searchParams }: { searchParams: Promise<Search> }) {
   const params = await searchParams;
@@ -32,7 +32,12 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
 
   if (params.pedido) return <PayOrder userId={user.id} orderNumber={params.pedido} />;
 
-  const target: CheckoutTarget | null = params.produto
+  const [bundleCv, bundlePhoto] = (params.pacote ?? "").split(".");
+  const target: CheckoutTarget | null = bundleCv && bundlePhoto
+    ? { bundle: { cvId: bundleCv, photoId: bundlePhoto } }
+    : params.foto
+      ? { photoId: params.foto }
+      : params.produto
     ? { productSlug: params.produto }
     : params.cv
       ? { cvId: params.cv }
@@ -58,7 +63,15 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
     throw error;
   }
   if (await alreadyOwns(user.id, item)) {
-    redirect(item.kind === "PRODUCT" ? "/meu-espaco/kits" : item.kind === "LETTER_UNLOCK" ? `/meu-espaco/cartas/${item.letterId}/editar` : `/meu-espaco/cvs/${item.cvId}`);
+    redirect(
+      item.kind === "PRODUCT"
+        ? "/meu-espaco/kits"
+        : item.kind === "LETTER_UNLOCK"
+          ? `/meu-espaco/cartas/${item.letterId}/editar`
+          : item.kind === "PHOTO_UNLOCK" || item.kind === "CV_PHOTO_BUNDLE"
+            ? `/meu-espaco/fotos/${item.photoId}`
+            : `/meu-espaco/cvs/${item.cvId}`,
+    );
   }
 
   const [methods, account, site] = await Promise.all([
@@ -92,7 +105,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
         ) : (
           <StartCheckoutForm
             methods={methods}
-            target={{ produto: params.produto, cv: params.cv, carta: params.carta }}
+            target={{ produto: params.produto, cv: params.cv, carta: params.carta, foto: params.foto, pacote: params.pacote }}
             defaults={{ name: account.name, email: account.email, phone: account.phone ? `+${account.phone}` : "" }}
           />
         )}

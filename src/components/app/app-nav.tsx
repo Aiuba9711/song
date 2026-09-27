@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, History, Home, Mail, MessageSquareText, Package, Receipt, UserRound } from "lucide-react";
+import { Camera, FileText, History, Home, Mail, MessageSquareText, Package, Receipt, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
@@ -10,6 +10,7 @@ const ITEMS = [
   { href: "/meu-espaco/cvs", label: "Meus CVs", icon: FileText, mobile: true },
   { href: "/meu-espaco/cartas", label: "Cartas", icon: Mail, mobile: true },
   { href: "/meu-espaco/mensagens", label: "Email e WhatsApp", icon: MessageSquareText },
+  { href: "/meu-espaco/fotos", label: "Foto profissional", icon: Camera },
   { href: "/meu-espaco/kits", label: "Meus kits", icon: Package, mobile: true },
   { href: "/meu-espaco/downloads", label: "Downloads", icon: History },
   { href: "/meu-espaco/compras", label: "Compras", icon: Receipt },

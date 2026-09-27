@@ -41,6 +41,7 @@ export function parseDesignForm(formData: FormData, accentColor: string) {
     photoShape: formData.get("photoShape") ?? undefined,
     photoPosition: formData.get("photoPosition") ?? undefined,
     pairs: formData.get("pairs") === "on",
+    photo: formData.get("photo") !== "off", // ausente = com fotografia (compatível com formulários antigos)
     sidebarSections: formData.getAll("sidebarSections").filter((v): v is string => typeof v === "string"),
   };
   return designSchema.safeParse(raw);

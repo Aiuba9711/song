@@ -33,6 +33,8 @@ export const designSchema = z.object({
   skillsStyle: z.enum(SKILL_STYLES).default("list"),
   photoShape: z.enum(PHOTO_SHAPES).default("circle"),
   photoPosition: z.enum(PHOTO_POSITIONS).default("left"),
+  /** false = modelo sem espaço para fotografia (filtro «Sem fotografia» da galeria) */
+  photo: z.boolean().default(true),
   /** Numa coluna: competências e idiomas lado a lado */
   pairs: z.boolean().default(false),
   /** Secções na coluna lateral (estruturas sidebar/split) */

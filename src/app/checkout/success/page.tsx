@@ -19,6 +19,7 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
 
   const cvItem = order.items.find((i) => i.kind === "CV_UNLOCK" && i.cvId);
   const letterItem = order.items.find((i) => i.kind === "LETTER_UNLOCK" && i.letterId);
+  const photoItem = order.items.find((i) => (i.kind === "PHOTO_UNLOCK" || i.kind === "CV_PHOTO_BUNDLE") && i.photoId);
   return (
     <div className="text-center">
       <div className="mx-auto grid size-16 place-items-center rounded-full bg-go-50 text-go-700">
@@ -37,7 +38,11 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
         </ul>
         <p className="mt-2 font-semibold">{formatMoney(order.totalMinor, order.currency)}</p>
       </Card>
-      {letterItem ? (
+      {photoItem ? (
+        <ButtonLink href={`/meu-espaco/fotos/${photoItem.photoId}`} size="lg" variant="success" className="mt-6 w-full max-w-md" icon={<Download className="size-5" aria-hidden />}>
+          Abrir a minha foto profissional
+        </ButtonLink>
+      ) : letterItem ? (
         <ButtonLink href={`/meu-espaco/cartas/${letterItem.letterId}/editar`} size="lg" variant="success" className="mt-6 w-full max-w-md" icon={<Download className="size-5" aria-hidden />}>
           Descarregar a minha carta
         </ButtonLink>

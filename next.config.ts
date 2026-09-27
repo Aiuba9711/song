@@ -40,8 +40,10 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@react-pdf/renderer"],
   experimental: {
     serverActions: {
-      // Fotos de CV (≤ 1,5 MB) e ficheiros de produtos (≤ 4 MB) via Server Actions.
-      bodySizeLimit: "5mb",
+      // Fotos (o navegador reduz antes de enviar; limite configurável PHOTO_MAX_UPLOAD_MB, até 10 MB por
+      // omissão) e ficheiros de produtos (≤ 4 MB) via Server Actions. Alguns alojamentos têm limites
+      // menores (ex.: 4,5 MB em funções serverless) — ver PHOTO_MODULE.md.
+      bodySizeLimit: "12mb",
     },
   },
   async headers() {

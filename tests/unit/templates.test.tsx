@@ -58,6 +58,10 @@ describe("catálogo de modelos", () => {
   it("a etiqueta «Compatível com ATS» só existe em designs realmente compatíveis", () => {
     const ats = CATALOG.filter((t) => t.isAtsFriendly);
     expect(ats.length).toBeGreaterThanOrEqual(6);
+    // Filtro «Com fotografia / Sem fotografia» da galeria
+    const noPhoto = CATALOG.filter((t) => designSchema.parse(t.design).photo === false);
+    expect(noPhoto.length).toBeGreaterThanOrEqual(3);
+    expect(CATALOG.length - noPhoto.length).toBeGreaterThanOrEqual(30);
     for (const t of CATALOG) {
       const d = designSchema.parse(resolveDesign({ layout: t.layout, design: t.design, accentColor: t.accentColor }));
       expect(isAtsCompatible(d), t.slug).toBe(t.isAtsFriendly);
@@ -89,10 +93,10 @@ describe.each(CATALOG.map((t) => [t.slug, t] as const))("modelo %s", (_slug, t) 
       }
       expect(needle.length).toBeGreaterThan(0);
     }
-    // Fotografia presente nos três formatos
-    expect(rawHtml).toContain('alt="Fotografia do candidato"');
-    expect(pdf.toString("latin1")).toMatch(/\/Subtype\s*\/Image/);
-    expect((await docxFiles(docx)).some((f) => f.startsWith("word/media/"))).toBe(true);
+    // Fotografia presente nos três formatos (ausente nos modelos «Sem fotografia»)
+    expect(rawHtml.includes('alt="Fotografia do candidato"')).toBe(design.photo);
+    expect(/\/Subtype\s*\/Image/.test(pdf.toString("latin1"))).toBe(design.photo);
+    expect((await docxFiles(docx)).some((f) => f.startsWith("word/media/"))).toBe(design.photo);
   });
 
   it("sem fotografia não inclui imagens e cabe em A4", async () => {

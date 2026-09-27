@@ -9,7 +9,7 @@ import { db } from "@/lib/db";
 
 export const metadata: Metadata = { title: "Downloads" };
 
-const KIND_LABEL = { CV_PDF: "CV · PDF", CV_DOCX: "CV · Word", LETTER_PDF: "Carta · PDF", LETTER_DOCX: "Carta · Word", PRODUCT_FILE: "Kit" } as const;
+const KIND_LABEL = { CV_PDF: "CV · PDF", CV_DOCX: "CV · Word", LETTER_PDF: "Carta · PDF", LETTER_DOCX: "Carta · Word", PHOTO_JPG: "Foto · JPG", PHOTO_PNG: "Foto · PNG", PRODUCT_FILE: "Kit" } as const;
 
 export default async function DownloadsPage() {
   const user = await requireUser("/meu-espaco/downloads");

@@ -53,6 +53,19 @@ SiteSettings (linha única "default") · Lead · RateLimitBucket
 
 Guardar um CV substitui todas as listas numa transação (simples e consistente com o assistente).
 
+### Foto Profissional
+
+| Modelo | Descrição |
+|---|---|
+| `ProfessionalPhoto` | Fotografia do utilizador: `originalKey`, `resultKey`, `thumbKey` (armazenamento privado), `format` (`PASSE`, `CV`, `QUADRADA`, `PERSONALIZADA`), `width`/`height`, `settings` (JSON do editor, inclui a caixa do rosto na saída), `backgroundId`, `outfitId`, `styleLabel`, `purchasedAt`. |
+| `PhotoBackground` | Fundo: `category` (`NEUTRO`, `CORPORATIVO`, `GRADIENTE`), `kind` (`SOLID`, `GRADIENT`, `PATTERN`, `IMAGE`), cores, `pattern`, `imageKey`, `passport` (recomendado para tipo passe), `isActive`, `sortOrder`. |
+| `PhotoOutfit` | Roupa digital: `gender`, `garment` (`BLAZER`, `FATO`, `CAMISA`, `BLUSA`), `jacketColor`, `shirtColor`, `tieColor`, `tags` (estilos), `isActive`, `sortOrder`. |
+
+`CV.professionalPhotoId` liga o CV à foto profissional usada (SetNull ao eliminar). `User.imageAiConsentAt`
+fica reservado para o consentimento de envio de imagens a um serviço externo (nenhum configurado).
+`OrderItem.photoId` + tipos `PHOTO_UNLOCK` / `CV_PHOTO_BUNDLE`; `Download.photoId` + `PHOTO_JPG` / `PHOTO_PNG`.
+Preços em `PaymentSettings` (`photoPriceMinor`, `photoPromoPriceMinor`, `photoPromoEndsAt`, `photoBundlePriceMinor`).
+
 ### Loja
 
 | Modelo | Descrição |

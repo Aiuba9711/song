@@ -29,7 +29,8 @@ function withoutPhoto(url: string) {
 }
 
 /** Pré-visualização de um modelo: imagem gerada (leve) ou, na falta dela, o próprio componente. */
-export function TemplatePreview({ t, withPhoto, width }: { t: GalleryTemplate; withPhoto: boolean; width: number }) {
+export function TemplatePreview({ t, withPhoto: wanted, width }: { t: GalleryTemplate; withPhoto: boolean; width: number }) {
+  const withPhoto = wanted && t.design.photo; // modelos sem espaço para fotografia
   const height = Math.round(width * (1123 / 794));
   if (t.previewImageUrl) {
     const src = withPhoto || !t.previewImageUrl.startsWith("/templates/") ? t.previewImageUrl : withoutPhoto(t.previewImageUrl);
@@ -59,13 +60,14 @@ export function TemplateGallery({ templates, initialCategory, currentSlug }: { t
   const [category, setCategory] = useState(initialCategory && templates.some((t) => t.category === initialCategory) ? initialCategory : "ALL");
   const [atsOnly, setAtsOnly] = useState(false);
   const [withPhoto, setWithPhoto] = useState(true);
+  const [photoFilter, setPhotoFilter] = useState<"all" | "with" | "without">("all");
 
   const categories = useMemo(() => {
     const seen = new Map<string, string>();
     for (const t of templates) if (!seen.has(t.category)) seen.set(t.category, t.categoryLabel);
     return [...seen.entries()];
   }, [templates]);
-  const visible = templates.filter((t) => (category === "ALL" || t.category === category) && (!atsOnly || t.isAtsFriendly));
+  const visible = templates.filter((t) => (category === "ALL" || t.category === category) && (!atsOnly || t.isAtsFriendly) && (photoFilter === "all" || (photoFilter === "with") === t.design.photo));
 
   return (
     <div>
@@ -90,6 +92,14 @@ export function TemplateGallery({ templates, initialCategory, currentSlug }: { t
           <label className="inline-flex cursor-pointer items-center gap-2 font-medium text-slate-700">
             <input type="checkbox" checked={atsOnly} onChange={(e) => setAtsOnly(e.target.checked)} className="size-4.5 accent-brand-700" />
             Só compatíveis com ATS
+          </label>
+          <label className="inline-flex items-center gap-2 font-medium text-slate-700">
+            <span>Fotografia</span>
+            <select value={photoFilter} onChange={(e) => setPhotoFilter(e.target.value as typeof photoFilter)} className="rounded-lg border border-slate-300 bg-white px-2 py-1">
+              <option value="all">Todos</option>
+              <option value="with">Com fotografia</option>
+              <option value="without">Sem fotografia</option>
+            </select>
           </label>
           <div className="inline-flex rounded-lg bg-slate-100 p-0.5" role="group" aria-label="Pré-visualização">
             {[true, false].map((v) => (

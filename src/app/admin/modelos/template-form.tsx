@@ -208,6 +208,14 @@ export function TemplateForm({
             {select("skillsStyle", "Competências", SKILL_STYLES, SKILL_LABELS)}
             {select("density", "Densidade", DENSITIES, DENSITY_LABELS)}
             {select("sidebarTone", "Cor da barra lateral", SIDEBAR_TONES, TONE_LABELS, live.structure !== "sidebar-left" && live.structure !== "sidebar-right")}
+            <Field id="photo" label="Fotografia">
+              {(a) => (
+                <Select {...a} name="photo" value={design.photo ? "on" : "off"} onChange={(ev) => set("photo", ev.target.value === "on")}>
+                  <option value="on">Com espaço para fotografia</option>
+                  <option value="off">Sem fotografia</option>
+                </Select>
+              )}
+            </Field>
             {select("photoShape", "Forma da fotografia", PHOTO_SHAPES, SHAPE_LABELS)}
             {select("photoPosition", "Posição da fotografia", PHOTO_POSITIONS, POSITION_LABELS)}
           </div>

@@ -114,10 +114,18 @@ Produto (ou CV com download pago)
 |---|---|---|
 | CV | Admin › Definições › Pagamentos (padrão) e Admin › Modelos de CV (por modelo) | 199 MT |
 | Carta | Admin › Definições › Pagamentos → «Preço da carta» | 0 (gratuita) |
+| Foto profissional / pacote CV + Foto | Admin › Foto Profissional › Preços | 0 (gratuita) / indisponível |
 | Kits | Admin › Produtos (cada produto) | definido no seed |
 
 Com preço > 0, a carta segue o mesmo fluxo do CV: `/checkout?carta=<id>` → pagamento manual →
 só o administrador confirma → `CoverLetter.purchasedAt` e download libertado (`LETTER_UNLOCK`).
+
+### Foto profissional e pacote CV + Foto
+
+Admin › Foto Profissional › Preços (só administradores): preço da foto (0 = gratuita), preço
+promocional com data de fim e preço do pacote CV + Foto (vazio = indisponível). Checkout:
+`/checkout?foto=<id>` (`PHOTO_UNLOCK`) e `/checkout?pacote=<cvId>.<photoId>` (`CV_PHOTO_BUNDLE`).
+A confirmação do administrador define `ProfessionalPhoto.purchasedAt` (e `CV.purchasedAt` no pacote).
 
 ## Cartão bancário (futuro)
 

@@ -136,7 +136,7 @@ export const CATALOG: CatalogTemplate[] = [
     layout: "CLASSICO",
     accentColor: "#111827",
     isAtsFriendly: true,
-    design: { ...ATS_BASE, header: "stacked", headingStyle: "caps", palette: "mono", entryStyle: "stacked", skillsStyle: "inline", photoShape: "square", photoPosition: "right" },
+    design: { photo: false, ...ATS_BASE, header: "stacked", headingStyle: "caps", palette: "mono", entryStyle: "stacked", skillsStyle: "inline", photoShape: "square", photoPosition: "right" },
   },
   // ── Recursos humanos ─────────────────────────────────────
   {
@@ -395,7 +395,7 @@ export const CATALOG: CatalogTemplate[] = [
     layout: "CLASSICO",
     accentColor: "#1e3a8a",
     isAtsFriendly: true,
-    design: { ...ATS_BASE, header: "left", headingStyle: "rule", entryStyle: "stacked", skillsStyle: "inline", photoShape: "square", photoPosition: "right" },
+    design: { photo: false, ...ATS_BASE, header: "left", headingStyle: "rule", entryStyle: "stacked", skillsStyle: "inline", photoShape: "square", photoPosition: "right" },
   },
   // ── Construção / logística / hotelaria / motorista / técnico ─
   {
@@ -485,7 +485,7 @@ export const CATALOG: CatalogTemplate[] = [
     layout: "CLASSICO",
     accentColor: "#111827",
     isAtsFriendly: true,
-    design: { ...ATS_BASE, header: "left", headingStyle: "caps", palette: "mono", skillsStyle: "inline", photoShape: "square", photoPosition: "right" },
+    design: { photo: false, ...ATS_BASE, header: "left", headingStyle: "caps", palette: "mono", skillsStyle: "inline", photoShape: "square", photoPosition: "right" },
   },
   {
     slug: "horizonte",

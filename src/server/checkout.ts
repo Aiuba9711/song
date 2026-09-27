@@ -6,16 +6,18 @@ import { calculateTotals } from "@/lib/pricing";
 import { generateOrderNumber } from "@/server/orders";
 import { getPaymentProvider } from "@/server/payments/registry";
 import { getPaymentSettings } from "@/server/payments/settings";
+import { getPhotoPricing } from "@/server/photos";
 
 export const MAX_OPEN_ORDERS = 5;
 
-export type CheckoutTarget = { productSlug: string } | { cvId: string } | { letterId: string };
+export type CheckoutTarget = { productSlug: string } | { cvId: string } | { letterId: string } | { photoId: string } | { bundle: { cvId: string; photoId: string } };
 
 export type ResolvedItem = {
-  kind: "PRODUCT" | "CV_UNLOCK" | "LETTER_UNLOCK";
+  kind: "PRODUCT" | "CV_UNLOCK" | "LETTER_UNLOCK" | "PHOTO_UNLOCK" | "CV_PHOTO_BUNDLE";
   productId: string | null;
   cvId: string | null;
   letterId: string | null;
+  photoId?: string | null;
   name: string;
   description: string;
   unitPriceMinor: number;
@@ -43,6 +45,8 @@ export async function resolveCheckoutItem(userId: string, target: CheckoutTarget
       currency: product.currency,
     };
   }
+
+  if ("photoId" in target || "bundle" in target) return resolvePhotoItem(userId, target);
 
   if ("letterId" in target) {
     const [letter, settings] = await Promise.all([
@@ -86,7 +90,13 @@ export async function resolveCheckoutItem(userId: string, target: CheckoutTarget
 }
 
 /** O utilizador já tem este item pago? */
-export async function alreadyOwns(userId: string, item: Pick<ResolvedItem, "productId" | "cvId"> & { letterId?: string | null }): Promise<boolean> {
+export async function alreadyOwns(userId: string, item: Pick<ResolvedItem, "productId" | "cvId"> & { letterId?: string | null; photoId?: string | null; kind?: ResolvedItem["kind"] }): Promise<boolean> {
+  if (item.kind === "CV_PHOTO_BUNDLE") {
+    return !!(await db.orderItem.findFirst({ where: { kind: "CV_PHOTO_BUNDLE", cvId: item.cvId, photoId: item.photoId, order: { userId, status: "PAID" } }, select: { id: true } }));
+  }
+  if (item.photoId) {
+    return !!(await db.orderItem.findFirst({ where: { photoId: item.photoId, kind: { in: ["PHOTO_UNLOCK", "CV_PHOTO_BUNDLE"] }, order: { userId, status: "PAID" } }, select: { id: true } }));
+  }
   const where = item.productId
     ? { productId: item.productId }
     : item.letterId
@@ -108,7 +118,15 @@ export async function createCheckoutOrder(userId: string, input: { target: Check
   const provider = getPaymentProvider(input.method);
   if (!(await provider.isAvailable())) throw new PaymentError("Este método de pagamento não está disponível.", "UNAVAILABLE");
 
-  const itemWhere = item.productId ? { productId: item.productId } : item.letterId ? { letterId: item.letterId } : { cvId: item.cvId! };
+  const itemWhere = item.productId
+    ? { productId: item.productId }
+    : item.kind === "CV_PHOTO_BUNDLE"
+      ? { kind: item.kind, cvId: item.cvId, photoId: item.photoId }
+      : item.photoId
+        ? { photoId: item.photoId, kind: item.kind }
+        : item.letterId
+          ? { letterId: item.letterId }
+          : { cvId: item.cvId! };
   const open = await db.order.findFirst({
     where: { userId, status: { in: ["AWAITING_PAYMENT", "PENDING_VERIFICATION"] }, items: { some: itemWhere } },
     include: { payments: { orderBy: { createdAt: "desc" }, take: 1 } },
@@ -142,7 +160,7 @@ export async function createCheckoutOrder(userId: string, input: { target: Check
           status: "AWAITING_PAYMENT",
           ...totals,
           items: {
-            create: { kind: item.kind, productId: item.productId, cvId: item.cvId, letterId: item.letterId, productName: item.name, unitPriceMinor: item.unitPriceMinor, quantity: 1 },
+            create: { kind: item.kind, productId: item.productId, cvId: item.cvId, letterId: item.letterId, photoId: item.photoId ?? null, productName: item.name, unitPriceMinor: item.unitPriceMinor, quantity: 1 },
           },
         },
         select: { id: true, number: true },
@@ -233,4 +251,44 @@ export async function canDownloadLetter(userId: string, letterId: string): Promi
 export async function getLetterPrice() {
   const settings = await getPaymentSettings();
   return { priceMinor: settings.letterPriceMinor, currency: settings.currency, paid: settings.letterPriceMinor > 0 };
+}
+
+/** Foto profissional (preço com promoção, se ativa) ou pacote CV + Foto — preços do admin. */
+async function resolvePhotoItem(userId: string, target: { photoId: string } | { bundle: { cvId: string; photoId: string } }): Promise<ResolvedItem> {
+  const pricing = await getPhotoPricing();
+  const photoId = "photoId" in target ? target.photoId : target.bundle.photoId;
+  const photo = await db.professionalPhoto.findFirst({ where: { id: photoId, userId }, select: { id: true, purchasedAt: true, format: true } });
+  if (!photo) throw new PaymentError("Fotografia não encontrada.", "INVALID_ITEM");
+
+  if ("photoId" in target) {
+    if (!pricing.paid) throw new PaymentError("A foto profissional é gratuita.", "INVALID_ITEM");
+    if (photo.purchasedAt) throw new PaymentError("Esta fotografia já foi comprada.", "INVALID_ITEM");
+    return {
+      kind: "PHOTO_UNLOCK",
+      productId: null,
+      cvId: null,
+      letterId: null,
+      photoId: photo.id,
+      name: "Foto profissional",
+      description: "Download em JPG/PNG sem marca d'água e uso nos seus CVs.",
+      unitPriceMinor: pricing.priceMinor,
+      currency: pricing.currency,
+    };
+  }
+
+  if (!pricing.bundleMinor) throw new PaymentError("O pacote CV + Foto não está disponível.", "INVALID_ITEM");
+  const cv = await db.cV.findFirst({ where: { id: target.bundle.cvId, userId }, select: { id: true, title: true, purchasedAt: true } });
+  if (!cv) throw new PaymentError("CV não encontrado.", "INVALID_ITEM");
+  if (cv.purchasedAt && photo.purchasedAt) throw new PaymentError("Já tem o CV e a fotografia.", "INVALID_ITEM");
+  return {
+    kind: "CV_PHOTO_BUNDLE",
+    productId: null,
+    cvId: cv.id,
+    letterId: null,
+    photoId: photo.id,
+    name: `Pacote CV + Foto profissional «${cv.title}»`,
+    description: "CV (PDF sem marca d'água e Word) e foto profissional (JPG/PNG e uso no CV).",
+    unitPriceMinor: pricing.bundleMinor,
+    currency: pricing.currency,
+  };
 }

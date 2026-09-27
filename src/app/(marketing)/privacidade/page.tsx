@@ -45,6 +45,12 @@ export default function PrivacyPage() {
         Não enviamos a sua fotografia nem o seu nome; emails, telefones e links são substituídos antes do envio. Não guardamos o texto enviado nem as sugestões, e nada é
         alterado no seu CV sem a sua confirmação. A IA não deve inventar informação: reveja sempre as sugestões.
       </p>
+      <p>
+        <strong>Foto Profissional.</strong> As fotografias que carrega ficam privadas na sua conta (só a pessoa titular as vê), sem os metadados do ficheiro (como a
+        localização GPS). A edição é feita no seu aparelho e nos nossos servidores; as fotografias não são enviadas a serviços externos nem usadas para treinar modelos de
+        inteligência artificial. A deteção do rosto serve apenas para enquadrar a imagem — não identifica a pessoa nem tira conclusões sobre ela. Pode eliminar cada
+        fotografia a qualquer momento.
+      </p>
 
       <h2>4. Cookies</h2>
       <p>
