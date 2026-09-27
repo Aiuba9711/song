@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Copy, Download, Eye, FilePlus2, FileText, Lock, Pencil, Trash2 } from "lucide-react";
+import { Copy, Download, Eye, FilePlus2, FileText, Pencil, ShoppingCart, Trash2 } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { buttonClass, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,11 +21,16 @@ export const metadata: Metadata = { title: "Meus CVs" };
 const ERRORS: Record<string, string> = {
   LIMIT: "Atingiu o limite de CVs. Elimine um CV antigo para criar outro.",
   NOT_FOUND: "CV não encontrado.",
+  DRAFT_EXISTS: "Já tem um CV em preparação. Conclua a compra desse CV (ou elimine-o) antes de começar outro.",
+  LOCKED: "Este CV já foi comprado com este modelo. Para usar outro modelo, crie um novo CV.",
+  INVALID_IMAGE: "Não foi possível ler a imagem.",
 };
 
 export default async function CvListPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const [user, params] = await Promise.all([requireUser("/meu-espaco/cvs"), searchParams]);
   const [cvs, access] = await Promise.all([listUserCvs(user.id), getCvDownloadAccess(user.id)]);
+  // Com o CV pago há no máximo um CV em preparação: «Criar novo CV» continua esse CV.
+  const draft = access.paywall ? cvs.find((cv) => !cv.purchasedAt && !access.unlocked.has(cv.id)) : undefined;
 
   return (
     <>
@@ -33,15 +38,26 @@ export default async function CvListPage({ searchParams }: { searchParams: Promi
         title="Meus CVs"
         description="Crie versões diferentes do CV para cada tipo de vaga."
         actions={
-          <ButtonLink href="/meu-espaco/cvs/novo" icon={<FilePlus2 className="size-5" aria-hidden />}>
-            Criar novo CV
-          </ButtonLink>
+          draft ? (
+            <ButtonLink href={`/meu-espaco/cvs/${draft.id}/editar`} icon={<Pencil className="size-5" aria-hidden />}>
+              Continuar CV em preparação
+            </ButtonLink>
+          ) : (
+            <ButtonLink href="/meu-espaco/cvs/novo" icon={<FilePlus2 className="size-5" aria-hidden />}>
+              Criar novo CV
+            </ButtonLink>
+          )
         }
       />
       <div className="space-y-3">
         {params.erro && <Alert tone="error">{ERRORS[params.erro] ?? "Não foi possível concluir a ação."}</Alert>}
         {params.duplicado && <Alert tone="success">CV duplicado. Pode agora adaptar a cópia a outra vaga.</Alert>}
         {params.eliminado && <Alert tone="success">CV eliminado.</Alert>}
+        {draft && cvs.length > 0 && (
+          <Alert tone="info">
+            Para criar outro CV, conclua primeiro a compra do CV em preparação («{draft.title}») ou elimine-o. Pode trocar o modelo desse CV quando quiser.
+          </Alert>
+        )}
       </div>
 
       {cvs.length === 0 ? (
@@ -50,7 +66,7 @@ export default async function CvListPage({ searchParams }: { searchParams: Promi
             icon={<FileText className="size-7" aria-hidden />}
             title="Ainda não tem CVs"
             description="Crie o seu primeiro CV profissional em poucos minutos. Pode editá-lo sempre que quiser."
-            action={<ButtonLink href="/meu-espaco/cvs/novo">Criar o meu primeiro CV</ButtonLink>}
+            action={<ButtonLink href="/meu-espaco/cvs/novo">Escolher modelo e criar CV</ButtonLink>}
           />
         </div>
       ) : (
@@ -69,7 +85,7 @@ export default async function CvListPage({ searchParams }: { searchParams: Promi
                     <p className="truncate text-sm text-slate-600">{[cv.fullName, cv.jobTitle].filter(Boolean).join(" · ") || "Sem dados pessoais"}</p>
                     <p className="mt-1 text-xs text-slate-500">
                       Modelo {cv.template?.name ?? "—"} · Atualizado {formatDate(cv.updatedAt)}
-                      {cv.currentStep < 10 && ` · Etapa ${cv.currentStep} de 10`}
+                      {access.paywall && (access.unlocked.has(cv.id) ? " · Comprado" : " · Em preparação")}
                     </p>
                   </div>
                 </div>
@@ -81,8 +97,8 @@ export default async function CvListPage({ searchParams }: { searchParams: Promi
                     Ver
                   </ButtonLink>
                   {access.paywall && !access.unlocked.has(cv.id) ? (
-                    <ButtonLink href={`/checkout?cv=${cv.id}`} prefetch={false} variant="success" size="sm" className="col-span-2" icon={<Lock className="size-4" aria-hidden />}>
-                      Desbloquear · {formatMoney(access.priceMinor, access.currency)}
+                    <ButtonLink href={`/checkout?cv=${cv.id}`} prefetch={false} variant="success" size="sm" className="col-span-2" icon={<ShoppingCart className="size-4" aria-hidden />}>
+                      Comprar · {formatMoney(cv.template?.priceMinor ?? access.priceMinor, access.currency)}
                     </ButtonLink>
                   ) : (
                     <>

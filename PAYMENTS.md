@@ -92,16 +92,20 @@ Produto (ou CV com download pago)
 | Instruções de pagamento | Uma instrução por linha, mostradas no checkout |
 | Moeda | Os pagamentos por carteira móvel só funcionam em MZN |
 | Valor padrão | Preço do download de um CV (ex.: 199 MT) |
-| Cobrar o download de CVs | Desligado por omissão. Quando ligado, criar/editar/pré-visualizar continuam grátis e a "geração final" (PDF/DOCX) exige pagamento confirmado **por CV** |
+| Cobrar o download de CVs | **Ligado por omissão** (CV a 199 MT). Escolher modelo, preencher e pré-visualizar (com marca d'água) são grátis; o PDF sem marca d'água e o DOCX exigem pagamento confirmado **por CV**. Pode ser desligado |
 | Cartão bancário | Sempre desativado até existir integração oficial |
 
-## Download pago de CVs
+## CV pago (199 MT)
 
-Com "Cobrar o download de CVs" ativo:
-
-- as rotas `/api/cv/[id]/pdf` e `/api/cv/[id]/docx` devolvem **402** sem um pedido `PAID` de desbloqueio para esse CV;
-- a interface mostra "Desbloquear download · 199 MT" (lista, pré-visualização e última etapa do assistente);
-- o desbloqueio é por CV: uma cópia duplicada é um novo CV.
+- **Preço na base de dados**, nunca no código: `CVTemplate.priceMinor` (preço próprio de um modelo,
+  opcional) ou, na falta dele, o valor padrão de Definições › Pagamentos (199 MT no seed). O admin
+  altera ambos; o pedido guarda o preço no momento da compra.
+- As rotas `/api/cv/[id]/pdf` e `/api/cv/[id]/docx` devolvem **402** sem compra confirmada;
+  `/api/cv/[id]/preview` devolve o PDF **com marca d'água** até à confirmação.
+- A interface mostra «COMPRAR CV — 199 MT» (editor, pré-visualização, lista de CVs).
+- Só um CV por comprar de cada vez (não se acumulam modelos gratuitamente). Quando o administrador
+  confirma o pagamento, `markPaymentSucceeded` marca `CV.purchasedAt`: o modelo desse CV fica fixo.
+- A compra é por CV: uma cópia duplicada é um novo CV, por comprar.
 
 ## Cartão bancário (futuro)
 

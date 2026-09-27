@@ -28,6 +28,10 @@ export async function markPaymentSucceeded(
   });
   if (order.count === 0) throw new PaymentError("O pedido não está a aguardar pagamento.", "INVALID_STATE");
 
+  // CV comprado: download final libertado e modelo fixado.
+  const cvItems = await tx.orderItem.findMany({ where: { orderId: payment.orderId, kind: "CV_UNLOCK", cvId: { not: null } }, select: { cvId: true } });
+  if (cvItems.length) await tx.cV.updateMany({ where: { id: { in: cvItems.map((i) => i.cvId!) }, purchasedAt: null }, data: { purchasedAt: new Date() } });
+
   await tx.auditLog.create({
     data: {
       actorId: args.reviewerId,

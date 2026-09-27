@@ -13,7 +13,7 @@ Pensada para smartphones Android e internet limitada.
 
 ---
 
-## Estado atual — Fase 1 (MVP) ✅ · Fase 2: pagamentos manuais ✅
+## Estado atual — Fase 1 (MVP) ✅ · Pagamentos manuais ✅ · Biblioteca de CVs ✅
 
 | Funcionalidade | Estado |
 |---|---|
@@ -21,8 +21,12 @@ Pensada para smartphones Android e internet limitada.
 | Conselhos de carreira, contactos, política de privacidade, termos | ✅ |
 | Registo, login, logout, recuperação de senha, sessões seguras | ✅ |
 | Meu Espaço: CVs, kits, downloads, compras, perfil, eliminar conta | ✅ |
-| Gerador de CV em 10 etapas (guardar, voltar, editar, duplicar, trocar modelo, pré-visualizar) | ✅ |
-| 3 layouts (Clássico, Moderno, Executivo) × 10 modelos por profissão | ✅ |
+| Biblioteca de **40 modelos originais** em 22 áreas e 17 estilos, A4, com e sem foto; selo «Compatível com ATS» calculado | ✅ |
+| Galeria pública (`/cv-modelos`) com filtros por área, ATS e com/sem foto; página por modelo | ✅ |
+| Fluxo «Criar meu CV» → escolher **um** modelo → editor visual (formulário à esquerda, pré-visualização em tempo real à direita; no telemóvel formulário ↓ pré-visualização) | ✅ |
+| Editor com 11 secções (dados, foto, resumo, experiência, formação, competências, idiomas, cursos, certificações, referências, secções extra) · SALVAR · PRÉ-VISUALIZAR · COMPRAR CV | ✅ |
+| Fotografia: JPG/PNG/WEBP, compressão no telemóvel e no servidor, EXIF removido, enquadramento (zoom/arrastar), posição, privada | ✅ |
+| Um motor de design → HTML, PDF e DOCX iguais (pré-visualização = documento final) | ✅ |
 | Download em PDF e Word (DOCX editável) | ✅ |
 | Modelo gratuito (CV + carta em Word) com fluxo pedido → entrega | ✅ |
 | Painel admin: dashboard, produtos/preços/ficheiros, modelos, utilizadores, pedidos, definições, auditoria | ✅ |
@@ -30,7 +34,8 @@ Pensada para smartphones Android e internet limitada.
 | Checkout mobile-first com pagamento **manual** M-Pesa / e-Mola / mKesh (`/checkout`, `/pending`, `/success`, `/failed`) | ✅ |
 | Admin: Definições → Pagamentos (números, instruções, moeda, valor padrão, métodos ativos) | ✅ |
 | Admin: Pagamentos pendentes (confirmar, rejeitar, pedir novo comprovativo) com auditoria | ✅ |
-| Download pago de CVs (opcional, desligado por omissão) | ✅ |
+| CV pago: **199 MT** por CV (valor na BD, por modelo ou padrão), marca d'água antes do pagamento, PDF limpo + DOCX editável depois | ✅ |
+| Admin: Modelos de CV (criar, editar design, duplicar, ativar/desativar, categoria, preço, imagem, ordem) | ✅ |
 | Cartão bancário | ⏳ placeholder — requer gateway oficial |
 | Integração por API com operadores, cartas, modelos de email/WhatsApp, cupões | ⏳ Fase 2 (restante) |
 
@@ -105,6 +110,7 @@ são geridos no painel `/admin` (os `SEED_*` servem apenas para a configuração
 | `npm run db:seed` | Dados iniciais (idempotente) |
 | `npm run admin:create` | Cria ou promove o administrador principal |
 | `npx tsx scripts/generate-brand-assets.ts` | Regenera ícones PWA, favicon e imagem Open Graph |
+| `npm run templates:previews` | Regenera as imagens da galeria (`public/templates/*.jpg`) a partir do próprio motor, com dados fictícios (`CHROMIUM_PATH` se necessário) |
 
 ## Testes
 
@@ -113,7 +119,7 @@ Os testes de integração e e2e usam uma base de dados **separada** (o nome tem 
 ```bash
 createdb emprego_test                 # uma vez
 # .env.test (versionado, sem segredos) aponta para emprego_test e ./storage-test
-npm test                              # 159 testes: auth, CV, PDF, DOCX, pedidos, pagamentos, downloads, permissões…
+npm test                              # 268 testes: auth, CV, 40 modelos × (HTML, PDF, DOCX), fotos, pedidos, pagamentos…
 npx playwright install chromium       # uma vez (ou CHROMIUM_PATH=/caminho/para/chrome)
 npm run test:e2e                      # prepara a BD de teste, faz build e testa em desktop e Pixel 7
 ```
@@ -123,10 +129,13 @@ Cobertura principal:
 - **Autenticação**: hash scrypt, sessões (token só em hash na BD), expiração, logout, recuperação de senha de uso único, rate limiting contra força bruta, redirecionamentos seguros.
 - **CV**: criar, guardar, reordenar, duplicar (foto copiada), eliminar, isolamento entre utilizadores.
 - **PDF / DOCX**: os 3 layouts geram ficheiros válidos (A4, margens, estilos, marcadores, acentos, fotografia opcional), CVs vazios não inventam conteúdo.
+- **Biblioteca de modelos**: ≥36 modelos com designs distintos, todas as 22 categorias e 17 estilos; para **cada** modelo, HTML, PDF e DOCX mostram todos os campos (nenhum desaparece) com e sem foto, cabem em A4, e o selo ATS corresponde ao design.
+- **Fluxo de modelo único**: escolher cria/troca o CV em preparação (nunca dois por comprar), modelo fixo após a compra, preço por modelo ou padrão, pré-visualização com marca d'água só antes da compra.
+- **Fotografia**: WEBP/PNG/JPG, redução, remoção de EXIF, enquadramento igual no editor e no PDF, rota privada.
 - **Pedidos e downloads**: produto gratuito → pedido pago de 0 MT → entrega; só quem tem pedido pago descarrega.
 - **Permissões**: USER/EDITOR/ADMIN nas ações administrativas; auditoria das alterações de preço.
 - **Pagamentos manuais**: criação do pedido e preço vindo da BD, troca de método, limites, instruções da configuração central, envio do comprovativo (→ `PENDING_VERIFICATION`, sem acesso), só ADMIN confirma (→ `PAID` + auditoria), rejeição, pedido de novo comprovativo, códigos repetidos, cancelamento, downloads de kits e de CV bloqueados até à confirmação.
-- **E2E (desktop + Android)**: compra com M-Pesa → pendente → admin confirma → acesso; pedido de novo comprovativo → rejeição; configuração de pagamentos; jornada completa (registo → CV em 10 etapas → PDF/Word → duplicar → eliminar), kit gratuito, isolamento entre contas, admin altera preço e WhatsApp, PWA, cabeçalhos de segurança, acessibilidade (axe, WCAG 2 AA) e ausência de scroll horizontal no telemóvel.
+- **E2E (desktop + Android)**: compra com M-Pesa → pendente → admin confirma → acesso; pedido de novo comprovativo → rejeição; configuração de pagamentos; jornada completa (Criar meu CV → galeria → registo → editor com pré-visualização e foto → trocar modelo → comprar 199 MT → admin confirma → PDF/Word), galeria com filtros, admin de modelos, kit gratuito, isolamento entre contas, admin altera preço e WhatsApp, PWA, cabeçalhos de segurança, acessibilidade (axe, WCAG 2 AA) e ausência de scroll horizontal no telemóvel.
 
 ## Produção e deploy
 
@@ -157,7 +166,7 @@ public/            ícones, logo, avatar, og.png, service worker
 scripts/           create-admin, generate-brand-assets, e2e-prepare
 src/app/           rotas (marketing, auth, meu-espaco, admin, api)
 src/components/    UI, layout, admin, marketing
-src/cv/            modelo do CV, validação, layouts (HTML, PDF, DOCX), gerador em etapas
+src/cv/            modelo do CV, validação, catálogo e motor de design (HTML, PDF, DOCX), editor
 src/server/        serviços de domínio (cv, users, orders, catalog, admin, settings)
 src/lib/           auth, segurança, storage, email, i18n, dinheiro, validação, pagamentos (interface)
 tests/             unit, integration, e2e

@@ -17,7 +17,7 @@ export function SiteFooter({ settings }: { settings: PublicSettings }) {
         <div>
           <h2 className="text-sm font-semibold text-ink">Ferramentas</h2>
           <ul className="mt-3 space-y-2 text-sm text-slate-600">
-            <li><Link href="/meu-espaco/cvs/novo" prefetch={false} className="hover:text-brand-700">Criar CV</Link></li>
+            <li><Link href="/cv-modelos" className="hover:text-brand-700">Criar CV</Link></li>
             <li><Link href="/cv-modelos" className="hover:text-brand-700">Modelos de CV</Link></li>
             <li><Link href="/kits" className="hover:text-brand-700">Kits de candidatura</Link></li>
             <li><Link href="/conselhos" className="hover:text-brand-700">Conselhos de carreira</Link></li>

@@ -30,7 +30,7 @@ export function SiteHeader() {
           <ButtonLink href="/meu-espaco" variant="ghost" className="hidden sm:inline-flex" icon={<UserRound className="size-4" aria-hidden />}>
             Meu Espaço
           </ButtonLink>
-          <ButtonLink href="/meu-espaco/cvs/novo" prefetch={false} className="hidden sm:inline-flex">
+          <ButtonLink href="/cv-modelos" className="hidden sm:inline-flex">
             Criar CV
           </ButtonLink>
           <details className="group relative md:hidden">
@@ -46,7 +46,7 @@ export function SiteHeader() {
                   {item.label}
                 </Link>
               ))}
-              <ButtonLink href="/meu-espaco/cvs/novo" prefetch={false} className="mt-2 w-full">
+              <ButtonLink href="/cv-modelos" className="mt-2 w-full">
                 Criar meu CV
               </ButtonLink>
             </nav>

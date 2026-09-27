@@ -66,14 +66,14 @@ describe("download do CV (PDF/DOCX)", () => {
   it("a fotografia é privada", async () => {
     const owner = await createUser();
     const { id } = await createCv(owner.id, {});
-    await setCvPhoto(owner.id, id, TINY_PNG, "image/png");
+    await setCvPhoto(owner.id, id, TINY_PNG);
     await loginAs();
     expect((await cvPhoto(req(), params({ id }))).status).toBe(404);
     resetCookies();
     await createSession(owner.id);
     const res = await cvPhoto(req(), params({ id }));
     expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toBe("image/png");
+    expect(res.headers.get("content-type")).toBe("image/jpeg");
   });
 });
 

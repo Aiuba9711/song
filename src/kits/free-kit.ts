@@ -1,4 +1,5 @@
 import { AlignmentType, Document, Packer, Paragraph, TextRun } from "docx";
+import { resolveDesign } from "@/cv/design";
 import { renderCvDocx } from "@/cv/docx";
 import type { CvContent } from "@/cv/types";
 
@@ -65,15 +66,17 @@ const PLACEHOLDER_CV: CvContent = {
     { name: "Português", level: "[Nível]" },
     { name: "[Outra língua]", level: "[Nível]" },
   ],
-  courses: [{ name: "[Nome do curso ou certificação]", institution: "[Entidade formadora]", year: "[Ano]" }],
+  courses: [{ name: "[Nome do curso]", institution: "[Entidade formadora]", year: "[Ano]" }],
+  certifications: [{ name: "[Nome da certificação]", institution: "[Entidade certificadora]", year: "[Ano]" }],
   references: [],
   referencesOnRequest: true,
   customSections: [],
   hiddenSections: [],
+  photoSettings: { zoom: 1, offsetX: 0, offsetY: 0, position: "auto" },
 };
 
 export function buildFreeCvTemplateDocx(): Promise<Buffer> {
-  return renderCvDocx(PLACEHOLDER_CV, { layout: "CLASSICO", accentColor: "#1d40d8" });
+  return renderCvDocx(PLACEHOLDER_CV, resolveDesign({ layout: "CLASSICO", accentColor: "#1d40d8" }));
 }
 
 const LETTER_PARAGRAPHS = [

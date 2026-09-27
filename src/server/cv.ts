@@ -1,17 +1,20 @@
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
-import type { CvContent, CvLayoutId, CvPhoto, CvTheme, SectionKey } from "@/cv/types";
+import { resolveDesign, type TemplateDesign } from "@/cv/design";
+import type { CvContent, CvLayoutId, CvPhoto, SectionKey } from "@/cv/types";
 import { SECTION_KEYS } from "@/cv/types";
 import type { cvContentSchema } from "@/cv/schema";
 import type { z } from "zod";
 import { db } from "@/lib/db";
+import { framePhoto, normalizePhoto } from "@/lib/photo";
 import { buildStorageKey, storage } from "@/lib/storage";
+import { getPaymentSettings } from "@/server/payments/settings";
 import { DomainError } from "@/server/users";
 
 export const MAX_CVS_PER_USER = 30;
 
 const cvInclude = {
-  template: { select: { id: true, slug: true, name: true, layout: true, accentColor: true, isActive: true } },
+  template: { select: { id: true, slug: true, name: true, layout: true, accentColor: true, design: true, isActive: true, priceMinor: true, isAtsFriendly: true, style: true } },
   experiences: { orderBy: { sortOrder: "asc" } },
   educations: { orderBy: { sortOrder: "asc" } },
   skills: { orderBy: { sortOrder: "asc" } },
@@ -23,11 +26,10 @@ const cvInclude = {
 
 export type CvWithRelations = Prisma.CVGetPayload<{ include: typeof cvInclude }>;
 
-const DEFAULT_THEME: CvTheme = { layout: "CLASSICO", accentColor: "#1d40d8" };
-
-export function themeOf(cv: Pick<CvWithRelations, "template">): CvTheme {
-  if (!cv.template) return DEFAULT_THEME;
-  return { layout: cv.template.layout as CvLayoutId, accentColor: cv.template.accentColor };
+/** Design do modelo do CV (predefinição Clássico quando não há modelo). */
+export function designOf(cv: Pick<CvWithRelations, "template">): TemplateDesign {
+  if (!cv.template) return resolveDesign(null);
+  return resolveDesign({ layout: cv.template.layout as CvLayoutId, design: cv.template.design, accentColor: cv.template.accentColor });
 }
 
 /** Converte o registo da BD no modelo normalizado usado pelos renderizadores. */
@@ -68,11 +70,18 @@ export function toCvContent(cv: CvWithRelations): CvContent {
     })),
     skills: cv.skills.map((s) => ({ name: s.name, level: s.level ?? "" })),
     languages: cv.languages.map((l) => ({ name: l.name, level: l.level })),
-    courses: cv.courses.map((c) => ({ name: c.name, institution: c.institution, year: c.year })),
+    courses: cv.courses.filter((c) => c.kind === "COURSE").map((c) => ({ name: c.name, institution: c.institution, year: c.year })),
+    certifications: cv.courses.filter((c) => c.kind === "CERTIFICATION").map((c) => ({ name: c.name, institution: c.institution, year: c.year })),
     references: cv.references.map(({ name, position, company, phone, email }) => ({ name, position, company, phone, email })),
     referencesOnRequest: cv.referencesOnRequest,
     customSections: cv.customSections.map((s) => ({ title: s.title, content: s.content })),
     hiddenSections: cv.hiddenSections.filter((s): s is SectionKey => (SECTION_KEYS as readonly string[]).includes(s)),
+    photoSettings: {
+      zoom: cv.photoZoom,
+      offsetX: cv.photoOffsetX,
+      offsetY: cv.photoOffsetY,
+      position: cv.photoPosition === "left" || cv.photoPosition === "right" || cv.photoPosition === "center" ? cv.photoPosition : "auto",
+    },
   };
 }
 
@@ -87,7 +96,8 @@ export async function listUserCvs(userId: string) {
       jobTitle: true,
       updatedAt: true,
       currentStep: true,
-      template: { select: { name: true, layout: true, accentColor: true } },
+      purchasedAt: true,
+      template: { select: { name: true, layout: true, accentColor: true, priceMinor: true, isAtsFriendly: true } },
     },
   });
 }
@@ -103,7 +113,44 @@ async function resolveTemplateId(templateId: string | null | undefined): Promise
   return t?.id ?? null;
 }
 
+/** CV ainda não comprado (rascunho) do utilizador — no máximo um quando o CV é pago. */
+export async function findUnpaidDraft(userId: string) {
+  return db.cV.findFirst({ where: { userId, purchasedAt: null }, orderBy: { updatedAt: "desc" }, select: { id: true, templateId: true } });
+}
+
+/** Com o download pago ativo, só é permitido um CV não comprado de cada vez. */
+async function assertCanStartNewDraft(userId: string) {
+  const settings = await getPaymentSettings();
+  if (!settings.cvPaywallEnabled) return;
+  const draft = await findUnpaidDraft(userId);
+  if (draft) {
+    throw new DomainError("Já tem um CV em preparação. Conclua a compra desse CV (ou elimine-o) antes de começar outro.", "DRAFT_EXISTS");
+  }
+}
+
+/**
+ * «Escolher este modelo»: define o modelo atual da conta e abre o CV em preparação.
+ * - Se já existe um rascunho não comprado, troca-lhe o modelo (não cria outro).
+ * - Caso contrário, cria um CV novo com este modelo.
+ */
+export async function chooseTemplate(userId: string, templateSlug: string): Promise<{ cvId: string; created: boolean }> {
+  const template = await db.cVTemplate.findFirst({ where: { slug: templateSlug, isActive: true }, select: { id: true } });
+  if (!template) throw new DomainError("Modelo indisponível.", "NOT_FOUND");
+  await db.user.update({ where: { id: userId }, data: { currentCvTemplateId: template.id } });
+  const settings = await getPaymentSettings();
+  if (settings.cvPaywallEnabled) {
+    const draft = await findUnpaidDraft(userId);
+    if (draft) {
+      await db.cV.update({ where: { id: draft.id }, data: { templateId: template.id } });
+      return { cvId: draft.id, created: false };
+    }
+  }
+  const cv = await createCv(userId, { templateSlug });
+  return { cvId: cv.id, created: true };
+}
+
 export async function createCv(userId: string, input: { title?: string; templateSlug?: string | null }) {
+  await assertCanStartNewDraft(userId);
   const count = await db.cV.count({ where: { userId } });
   if (count >= MAX_CVS_PER_USER) {
     throw new DomainError(`Atingiu o limite de ${MAX_CVS_PER_USER} CVs. Elimine um CV antigo para criar outro.`, "LIMIT");
@@ -115,6 +162,7 @@ export async function createCv(userId: string, input: { title?: string; template
       : db.cVTemplate.findFirst({ where: { isActive: true }, orderBy: { sortOrder: "asc" }, select: { id: true, name: true } }),
   ]);
 
+  if (template) await db.user.update({ where: { id: userId }, data: { currentCvTemplateId: template.id } });
   // Pré-preenche apenas com dados que o próprio utilizador forneceu na conta.
   return db.cV.create({
     data: {
@@ -135,9 +183,12 @@ type ParsedContent = z.output<typeof cvContentSchema>;
 
 /** Guarda todo o conteúdo do CV numa transação (substitui as listas). */
 export async function saveCv(userId: string, cvId: string, content: ParsedContent, step?: number) {
-  const existing = await db.cV.findFirst({ where: { id: cvId, userId }, select: { id: true, photoKey: true } });
+  const existing = await db.cV.findFirst({ where: { id: cvId, userId }, select: { id: true, photoKey: true, purchasedAt: true, templateId: true } });
   if (!existing) throw new DomainError("CV não encontrado.", "NOT_FOUND");
-  const templateId = await resolveTemplateId(content.templateId);
+  // Depois da compra o modelo fica fixo (a compra é do CV com aquele modelo).
+  const templateId = existing.purchasedAt ? existing.templateId : await resolveTemplateId(content.templateId);
+  if (templateId && templateId !== existing.templateId) await db.user.update({ where: { id: userId }, data: { currentCvTemplateId: templateId } });
+  const ph = content.photoSettings;
   const p = content.personal;
   const withOrder = <T,>(items: T[]) => items.map((item, i) => ({ ...item, cvId, sortOrder: i }));
 
@@ -160,7 +211,11 @@ export async function saveCv(userId: string, cvId: string, content: ParsedConten
         summary: content.summary,
         referencesOnRequest: content.referencesOnRequest,
         hiddenSections: content.hiddenSections,
-        ...(step ? { currentStep: Math.min(Math.max(step, 1), 10) } : {}),
+        photoZoom: ph.zoom,
+        photoOffsetX: ph.offsetX,
+        photoOffsetY: ph.offsetY,
+        photoPosition: ph.position === "auto" ? null : ph.position,
+        ...(step ? { currentStep: Math.min(Math.max(step, 1), 11) } : {}),
       },
     }),
     db.cVExperience.deleteMany({ where: { cvId } }),
@@ -174,23 +229,35 @@ export async function saveCv(userId: string, cvId: string, content: ParsedConten
     db.cVEducation.createMany({ data: withOrder(content.educations) }),
     db.cVSkill.createMany({ data: withOrder(content.skills.map((s) => ({ name: s.name, level: s.level || null }))) }),
     db.cVLanguage.createMany({ data: withOrder(content.languages) }),
-    db.cVCourse.createMany({ data: withOrder(content.courses) }),
+    db.cVCourse.createMany({
+      data: [
+        ...content.courses.map((c) => ({ ...c, kind: "COURSE" as const })),
+        ...content.certifications.map((c) => ({ ...c, kind: "CERTIFICATION" as const })),
+      ].map((c, i) => ({ ...c, cvId, sortOrder: i })),
+    }),
     db.cVReference.createMany({ data: withOrder(content.references) }),
     db.cVCustomSection.createMany({ data: withOrder(content.customSections) }),
   ]);
   return { savedAt: new Date() };
 }
 
+/** Trocar o modelo — só antes de o CV ser comprado. */
 export async function setCvTemplate(userId: string, cvId: string, templateId: string) {
   const resolved = await resolveTemplateId(templateId);
   if (!resolved) throw new DomainError("Modelo indisponível.", "NOT_FOUND");
-  const res = await db.cV.updateMany({ where: { id: cvId, userId }, data: { templateId: resolved } });
-  if (res.count === 0) throw new DomainError("CV não encontrado.", "NOT_FOUND");
+  const cv = await db.cV.findFirst({ where: { id: cvId, userId }, select: { purchasedAt: true } });
+  if (!cv) throw new DomainError("CV não encontrado.", "NOT_FOUND");
+  if (cv.purchasedAt) throw new DomainError("Este CV já foi comprado com este modelo. Para outro modelo, crie um novo CV.", "LOCKED");
+  await db.$transaction([
+    db.cV.update({ where: { id: cvId }, data: { templateId: resolved } }),
+    db.user.update({ where: { id: userId }, data: { currentCvTemplateId: resolved } }),
+  ]);
 }
 
 export async function duplicateCv(userId: string, cvId: string) {
   const cv = await getUserCv(userId, cvId);
   if (!cv) throw new DomainError("CV não encontrado.", "NOT_FOUND");
+  await assertCanStartNewDraft(userId);
   const count = await db.cV.count({ where: { userId } });
   if (count >= MAX_CVS_PER_USER) throw new DomainError(`Atingiu o limite de ${MAX_CVS_PER_USER} CVs.`, "LIMIT");
 
@@ -222,6 +289,10 @@ export async function duplicateCv(userId: string, cvId: string) {
       website: cv.website,
       photoKey,
       showPhoto: cv.showPhoto && !!photoKey,
+      photoZoom: cv.photoZoom,
+      photoOffsetX: cv.photoOffsetX,
+      photoOffsetY: cv.photoOffsetY,
+      photoPosition: cv.photoPosition,
       summary: cv.summary,
       referencesOnRequest: cv.referencesOnRequest,
       hiddenSections: cv.hiddenSections,
@@ -246,12 +317,22 @@ export async function deleteCv(userId: string, cvId: string) {
   if (cv.photoKey) await storage().delete(cv.photoKey).catch(() => undefined);
 }
 
-export async function setCvPhoto(userId: string, cvId: string, data: Buffer, mime: "image/jpeg" | "image/png") {
+/**
+ * Guarda a fotografia do CV: aceita JPG/PNG/WEBP, corrige a orientação, remove metadados (EXIF/GPS),
+ * redimensiona e comprime (JPEG). O enquadramento volta ao centro.
+ */
+export async function setCvPhoto(userId: string, cvId: string, raw: Buffer) {
   const cv = await db.cV.findFirst({ where: { id: cvId, userId }, select: { id: true, photoKey: true } });
   if (!cv) throw new DomainError("CV não encontrado.", "NOT_FOUND");
-  const key = buildStorageKey(`cv-photos/${userId}`, mime === "image/png" ? "png" : "jpg");
-  await storage().put({ key, body: data, contentType: mime });
-  await db.cV.update({ where: { id: cv.id }, data: { photoKey: key, showPhoto: true } });
+  let normalized: Buffer;
+  try {
+    normalized = (await normalizePhoto(raw)).data;
+  } catch {
+    throw new DomainError("Não foi possível ler a imagem. Use JPG, PNG ou WEBP.", "INVALID_IMAGE");
+  }
+  const key = buildStorageKey(`cv-photos/${userId}`, "jpg");
+  await storage().put({ key, body: normalized, contentType: "image/jpeg" });
+  await db.cV.update({ where: { id: cv.id }, data: { photoKey: key, showPhoto: true, photoZoom: 1, photoOffsetX: 0, photoOffsetY: 0 } });
   if (cv.photoKey) await storage().delete(cv.photoKey).catch(() => undefined);
 }
 
@@ -262,11 +343,18 @@ export async function removeCvPhoto(userId: string, cvId: string) {
   if (cv.photoKey) await storage().delete(cv.photoKey).catch(() => undefined);
 }
 
-export async function loadCvPhoto(photoKey: string | null): Promise<CvPhoto | null> {
+/** Fotografia original (já normalizada) — usada no editor de enquadramento. */
+export async function loadRawPhoto(photoKey: string | null): Promise<Buffer | null> {
   if (!photoKey) return null;
-  const data = await storage().get(photoKey);
-  if (!data) return null;
-  return { data, mime: photoKey.endsWith(".png") ? "image/png" : "image/jpeg" };
+  return storage().get(photoKey);
+}
+
+/** Fotografia enquadrada (quadrada) — a MESMA imagem é usada na pré-visualização, no PDF e no DOCX. */
+export async function loadFramedPhoto(cv: { photoKey: string | null; photoZoom: number; photoOffsetX: number; photoOffsetY: number }): Promise<CvPhoto | null> {
+  const raw = await loadRawPhoto(cv.photoKey);
+  if (!raw) return null;
+  const data = await framePhoto(raw, { zoom: cv.photoZoom, offsetX: cv.photoOffsetX, offsetY: cv.photoOffsetY });
+  return { data, mime: "image/jpeg" };
 }
 
 /** Tudo o que é necessário para gerar PDF/DOCX de um CV do utilizador. */
@@ -274,8 +362,8 @@ export async function getCvForExport(userId: string, cvId: string) {
   const cv = await getUserCv(userId, cvId);
   if (!cv) return null;
   const content = toCvContent(cv);
-  const photo = content.personal.showPhoto ? await loadCvPhoto(cv.photoKey) : null;
-  return { cv, content, theme: themeOf(cv), photo };
+  const photo = content.personal.showPhoto ? await loadFramedPhoto(cv) : null;
+  return { cv, content, design: designOf(cv), photo };
 }
 
 export async function recordDownload(input: { userId: string; kind: "CV_PDF" | "CV_DOCX" | "PRODUCT_FILE"; label: string; cvId?: string; productFileId?: string }) {

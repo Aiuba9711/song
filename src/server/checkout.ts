@@ -43,18 +43,20 @@ export async function resolveCheckoutItem(userId: string, target: CheckoutTarget
   }
 
   const [cv, settings] = await Promise.all([
-    db.cV.findFirst({ where: { id: target.cvId, userId }, select: { id: true, title: true } }),
+    db.cV.findFirst({ where: { id: target.cvId, userId }, select: { id: true, title: true, purchasedAt: true, template: { select: { name: true, priceMinor: true } } } }),
     getPaymentSettings(),
   ]);
   if (!cv) throw new PaymentError("CV não encontrado.", "INVALID_ITEM");
   if (!settings.cvPaywallEnabled) throw new PaymentError("O download deste CV já é gratuito.", "INVALID_ITEM");
+  if (cv.purchasedAt) throw new PaymentError("Este CV já foi comprado.", "INVALID_ITEM");
   return {
     kind: "CV_UNLOCK",
     productId: null,
     cvId: cv.id,
-    name: `Download do CV «${cv.title}» (PDF e Word)`,
-    description: "Desbloqueia o download em PDF e Word deste CV.",
-    unitPriceMinor: settings.defaultPriceMinor,
+    name: `CV profissional «${cv.title}»${cv.template ? ` — modelo ${cv.template.name}` : ""}`,
+    description: "PDF sem marca d'água e Word (DOCX) editável deste CV.",
+    // Preço do modelo (definido no admin) ou valor padrão da configuração de pagamentos.
+    unitPriceMinor: cv.template?.priceMinor ?? settings.defaultPriceMinor,
     currency: settings.currency,
   };
 }
@@ -161,16 +163,29 @@ export async function cancelCustomerOrder(userId: string, orderNumber: string) {
 export async function canDownloadCv(userId: string, cvId: string): Promise<boolean> {
   const settings = await getPaymentSettings();
   if (!settings.cvPaywallEnabled) return true;
-  return alreadyOwns(userId, { productId: null, cvId });
+  const cv = await db.cV.findFirst({ where: { id: cvId, userId }, select: { purchasedAt: true } });
+  if (!cv) return false;
+  return !!cv.purchasedAt || (await alreadyOwns(userId, { productId: null, cvId }));
+}
+
+/** Preço de um CV (para mostrar no editor): preço do modelo ou valor padrão. */
+export async function getCvPrice(templatePriceMinor: number | null | undefined) {
+  const settings = await getPaymentSettings();
+  return { priceMinor: templatePriceMinor ?? settings.defaultPriceMinor, currency: settings.currency, paywall: settings.cvPaywallEnabled };
 }
 
 /** Estado do download pago de CVs para um utilizador (para a interface). */
 export async function getCvDownloadAccess(userId: string) {
   const settings = await getPaymentSettings();
   if (!settings.cvPaywallEnabled) return { paywall: false as const, priceMinor: 0, currency: settings.currency, unlocked: new Set<string>() };
-  const items = await db.orderItem.findMany({
-    where: { kind: "CV_UNLOCK", cvId: { not: null }, order: { userId, status: "PAID" } },
-    select: { cvId: true },
-  });
-  return { paywall: true as const, priceMinor: settings.defaultPriceMinor, currency: settings.currency, unlocked: new Set(items.map((i) => i.cvId!)) };
+  const [items, purchased] = await Promise.all([
+    db.orderItem.findMany({ where: { kind: "CV_UNLOCK", cvId: { not: null }, order: { userId, status: "PAID" } }, select: { cvId: true } }),
+    db.cV.findMany({ where: { userId, purchasedAt: { not: null } }, select: { id: true } }),
+  ]);
+  return {
+    paywall: true as const,
+    priceMinor: settings.defaultPriceMinor,
+    currency: settings.currency,
+    unlocked: new Set([...items.map((i) => i.cvId!), ...purchased.map((c) => c.id)]),
+  };
 }

@@ -26,7 +26,7 @@ export async function createUser(opts: { role?: Role; password?: string; email?:
   });
 }
 
-export async function createTemplate(overrides: Partial<{ slug: string; isActive: boolean; layout: "CLASSICO" | "MODERNO" | "EXECUTIVO" }> = {}) {
+export async function createTemplate(overrides: Partial<{ slug: string; isActive: boolean; layout: "CLASSICO" | "MODERNO" | "EXECUTIVO"; priceMinor: number | null }> = {}) {
   counter += 1;
   return db.cVTemplate.create({
     data: {
@@ -35,6 +35,7 @@ export async function createTemplate(overrides: Partial<{ slug: string; isActive
       description: "Modelo de teste",
       layout: overrides.layout ?? "CLASSICO",
       isActive: overrides.isActive ?? true,
+      priceMinor: overrides.priceMinor ?? null,
       sortOrder: counter,
     },
   });

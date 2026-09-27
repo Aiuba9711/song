@@ -19,7 +19,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   // Download pago (quando ativado no admin): só depois de o pagamento ser confirmado.
   if (!(await canDownloadCv(user.id, id))) return jsonError(402, "O download deste CV requer pagamento confirmado.");
 
-  const docx = await renderCvDocx(data.content, data.theme, data.photo);
+  const docx = await renderCvDocx(data.content, data.design, data.photo);
   const fileName = exportFileName(data.content, "docx");
   await recordDownload({ userId: user.id, kind: "CV_DOCX", label: fileName, cvId: id });
 

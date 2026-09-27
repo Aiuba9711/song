@@ -1,31 +1,30 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Copy, Download, Lock, Pencil } from "lucide-react";
+import { ArrowLeft, Copy, Download, LayoutTemplate, Pencil, ShoppingCart } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { buttonClass, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { CvPreview } from "@/cv/preview";
 import { ScaledSheet } from "@/cv/preview/scaled";
-import { LAYOUTS } from "@/cv/layouts";
 import { requireUser } from "@/lib/auth/guards";
 import { t } from "@/lib/i18n/messages";
-import { listActiveTemplates } from "@/server/catalog";
 import { formatMoney } from "@/lib/money";
-import { getCvDownloadAccess } from "@/server/checkout";
-import { getUserCv, themeOf, toCvContent } from "@/server/cv";
-import { duplicateCvAction, setTemplateAction } from "../actions";
+import { canDownloadCv, getCvPrice } from "@/server/checkout";
+import { designOf, getUserCv, toCvContent } from "@/server/cv";
+import { duplicateCvAction } from "../actions";
 
 export const metadata: Metadata = { title: "Pré-visualizar CV" };
 
 export default async function CvPreviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requireUser(`/meu-espaco/cvs/${id}`);
-  const [cv, templates, access] = await Promise.all([getUserCv(user.id, id), listActiveTemplates(), getCvDownloadAccess(user.id)]);
+  const cv = await getUserCv(user.id, id);
   if (!cv) notFound();
+  const [unlocked, price] = await Promise.all([canDownloadCv(user.id, cv.id), getCvPrice(cv.template?.priceMinor)]);
   const content = toCvContent(cv);
-  const theme = themeOf(cv);
+  const design = designOf(cv);
   const photoUrl = cv.photoKey ? `/api/cv/${cv.id}/photo?v=${cv.updatedAt.getTime()}` : null;
   const incomplete = !content.personal.fullName || (!content.experiences.length && !content.educations.length);
 
@@ -37,7 +36,8 @@ export default async function CvPreviewPage({ params }: { params: Promise<{ id: 
         </Link>
         <h1 className="text-2xl font-bold tracking-tight">{cv.title}</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Modelo {cv.template?.name ?? LAYOUTS[theme.layout].name} · {LAYOUTS[theme.layout].name}
+          Modelo {cv.template?.name ?? "—"}
+          {cv.purchasedAt ? " · Comprado" : ""}
         </p>
         {incomplete && (
           <Alert tone="warning" className="mt-4">
@@ -46,7 +46,7 @@ export default async function CvPreviewPage({ params }: { params: Promise<{ id: 
         )}
         <div className="mt-5 rounded-2xl bg-slate-200/60 p-3 sm:p-6">
           <ScaledSheet label={`Pré-visualização do CV ${cv.title}`}>
-            <CvPreview cv={content} theme={theme} photoUrl={photoUrl} />
+            <CvPreview cv={content} design={design} photoUrl={photoUrl} watermark={!unlocked} />
           </ScaledSheet>
         </div>
       </div>
@@ -54,11 +54,13 @@ export default async function CvPreviewPage({ params }: { params: Promise<{ id: 
       <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
         <Card className="space-y-3 p-5">
           <h2 className="font-semibold">Descarregar</h2>
-          {access.paywall && !access.unlocked.has(cv.id) ? (
+          {!unlocked ? (
             <>
-              <p className="text-sm text-slate-600">Pode editar e pré-visualizar à vontade. O download em PDF e Word fica disponível depois do pagamento confirmado.</p>
-              <ButtonLink href={`/checkout?cv=${cv.id}`} prefetch={false} variant="success" size="lg" className="w-full" icon={<Lock className="size-5" aria-hidden />}>
-                Desbloquear download · {formatMoney(access.priceMinor, access.currency)}
+              <p className="text-sm text-slate-600">
+                Pode editar e pré-visualizar à vontade. O PDF sem marca d&apos;água e o Word editável ficam disponíveis depois do pagamento confirmado.
+              </p>
+              <ButtonLink href={`/checkout?cv=${cv.id}`} prefetch={false} variant="success" size="lg" className="w-full" icon={<ShoppingCart className="size-5" aria-hidden />}>
+                Comprar CV — {formatMoney(price.priceMinor, price.currency)}
               </ButtonLink>
             </>
           ) : (
@@ -86,25 +88,18 @@ export default async function CvPreviewPage({ params }: { params: Promise<{ id: 
           </form>
         </Card>
         <Card className="p-5">
-          <h2 className="font-semibold">Trocar de modelo</h2>
-          <ul className="mt-3 grid grid-cols-2 gap-2 xl:grid-cols-1">
-            {templates.map((tpl) => (
-              <li key={tpl.id}>
-                <form action={setTemplateAction}>
-                  <input type="hidden" name="cvId" value={cv.id} />
-                  <input type="hidden" name="templateId" value={tpl.id} />
-                  <button
-                    type="submit"
-                    aria-pressed={tpl.id === cv.templateId}
-                    className="flex w-full items-center gap-2 rounded-xl border border-slate-200 px-2.5 py-2 text-left text-sm hover:bg-slate-50 aria-pressed:border-brand-600 aria-pressed:bg-brand-50 aria-pressed:font-semibold"
-                  >
-                    <span className="size-3 shrink-0 rounded-full" style={{ background: tpl.accentColor }} aria-hidden />
-                    <span className="truncate">{tpl.name}</span>
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
+          <h2 className="font-semibold">Modelo</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            {cv.template?.name ?? "—"}
+            {cv.template?.isAtsFriendly ? " · Compatível com ATS" : ""}
+          </p>
+          {cv.purchasedAt ? (
+            <p className="mt-2 text-xs text-slate-500">Este CV foi comprado com este modelo. Para outro modelo, crie um novo CV.</p>
+          ) : (
+            <ButtonLink href={`/meu-espaco/cvs/${cv.id}/editar?trocar=1`} variant="outline" size="sm" className="mt-3 w-full" icon={<LayoutTemplate className="size-4" aria-hidden />}>
+              Trocar modelo
+            </ButtonLink>
+          )}
         </Card>
       </aside>
     </div>

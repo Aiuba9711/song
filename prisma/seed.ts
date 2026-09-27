@@ -6,25 +6,15 @@
  */
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient, type CvLayout, type TemplateCategory } from "../src/generated/prisma/client";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { PrismaClient, type Prisma } from "../src/generated/prisma/client";
+import { CATALOG } from "../src/cv/catalog";
 import { createStorage } from "../src/lib/storage/create";
 import { buildFreeCoverLetterDocx, buildFreeCvTemplateDocx } from "../src/kits/free-kit";
 import { randomUUID } from "node:crypto";
 
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
-
-const TEMPLATES: Array<{ slug: string; name: string; description: string; category: TemplateCategory; layout: CvLayout; accentColor: string }> = [
-  { slug: "primeiro-emprego", name: "Primeiro Emprego", category: "PRIMEIRO_EMPREGO", layout: "CLASSICO", accentColor: "#1d40d8", description: "Destaca a formação, estágios, voluntariado e competências — ideal para quem procura o primeiro emprego." },
-  { slug: "administrativo", name: "Administrativo", category: "ADMINISTRATIVO", layout: "CLASSICO", accentColor: "#334155", description: "Sóbrio e organizado, para funções de secretariado, assistência administrativa e atendimento." },
-  { slug: "contabilidade", name: "Contabilidade", category: "CONTABILIDADE", layout: "EXECUTIVO", accentColor: "#1e3a8a", description: "Estrutura rigorosa com datas em destaque, para contabilistas, técnicos financeiros e auditores." },
-  { slug: "recursos-humanos", name: "Recursos Humanos", category: "RECURSOS_HUMANOS", layout: "MODERNO", accentColor: "#0e7490", description: "Barra lateral com competências interpessoais e idiomas, para gestão de pessoas e recrutamento." },
-  { slug: "saude", name: "Saúde", category: "SAUDE", layout: "CLASSICO", accentColor: "#0f766e", description: "Claro e profissional, para enfermagem, técnicos de saúde, farmácia e medicina." },
-  { slug: "educacao", name: "Educação", category: "EDUCACAO", layout: "MODERNO", accentColor: "#a16207", description: "Para professores, formadores e educadores — destaca formação e experiência pedagógica." },
-  { slug: "informatica", name: "Informática", category: "INFORMATICA", layout: "MODERNO", accentColor: "#1d4ed8", description: "Moderno, com competências técnicas em evidência, para TI, suporte, redes e programação." },
-  { slug: "engenharia", name: "Engenharia", category: "ENGENHARIA", layout: "EXECUTIVO", accentColor: "#9a3412", description: "Para engenheiros e técnicos — projetos, certificações e experiência de campo em destaque." },
-  { slug: "vendas-marketing", name: "Vendas e Marketing", category: "VENDAS_MARKETING", layout: "MODERNO", accentColor: "#be123c", description: "Visual confiante para vendas, marketing, comunicação e atendimento comercial." },
-  { slug: "executivo", name: "Executivo", category: "EXECUTIVO", layout: "EXECUTIVO", accentColor: "#0f172a", description: "Para cargos de direção e gestão sénior: cabeçalho forte e tipografia elegante." },
-];
 
 type SeedProduct = {
   slug: string;
@@ -122,14 +112,34 @@ const DEFAULT_PAYMENT_INSTRUCTIONS = [
 ].join("\n");
 
 async function main() {
-  for (const [i, t] of TEMPLATES.entries()) {
-    await db.cVTemplate.upsert({
-      where: { slug: t.slug },
-      create: { ...t, sortOrder: i * 10 },
-      update: {},
-    });
+  // Biblioteca de modelos (src/cv/catalog.ts). Modelos já existentes só recebem o design
+  // se ainda não o tiverem — edições feitas no admin são preservadas.
+  let created = 0;
+  for (const [i, t] of CATALOG.entries()) {
+    const previewFile = path.join("public", "templates", `${t.slug}.jpg`);
+    const previewImageUrl = existsSync(previewFile) ? `/templates/${t.slug}.jpg` : null;
+    const data = {
+      name: t.name,
+      description: t.description,
+      category: t.category,
+      style: t.style,
+      layout: t.layout,
+      accentColor: t.accentColor,
+      isAtsFriendly: t.isAtsFriendly,
+      design: t.design as Prisma.InputJsonValue,
+      sortOrder: (i + 1) * 10,
+    };
+    const existing = await db.cVTemplate.findUnique({ where: { slug: t.slug } });
+    if (!existing) {
+      await db.cVTemplate.create({ data: { slug: t.slug, ...data, previewImageUrl } });
+      created++;
+    } else if (existing.design === null) {
+      await db.cVTemplate.update({ where: { id: existing.id }, data: { ...data, previewImageUrl: existing.previewImageUrl ?? previewImageUrl } });
+    } else if (!existing.previewImageUrl && previewImageUrl) {
+      await db.cVTemplate.update({ where: { id: existing.id }, data: { previewImageUrl } });
+    }
   }
-  console.info(`✔ ${TEMPLATES.length} modelos de CV`);
+  console.info(`✔ ${CATALOG.length} modelos de CV (${created} novos)`);
 
   for (const p of PRODUCTS) {
     await db.product.upsert({

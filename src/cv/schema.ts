@@ -67,6 +67,10 @@ export const cvContentSchema = z.object({
     .array(z.object({ name: z.string().trim().min(1, "Indique o nome do curso.").max(150), institution: text(120), year: text(20) }))
     .max(MAX_ITEMS)
     .default([]),
+  certifications: z
+    .array(z.object({ name: z.string().trim().min(1, "Indique o nome da certificação.").max(150), institution: text(120), year: text(20) }))
+    .max(MAX_ITEMS)
+    .default([]),
   references: z
     .array(
       z.object({
@@ -85,6 +89,14 @@ export const cvContentSchema = z.object({
     .max(5)
     .default([]),
   hiddenSections: z.array(z.enum(SECTION_KEYS)).default([]),
+  photoSettings: z
+    .object({
+      zoom: z.number().min(1).max(3).default(1),
+      offsetX: z.number().min(-1).max(1).default(0),
+      offsetY: z.number().min(-1).max(1).default(0),
+      position: z.enum(["auto", "left", "right", "center"]).default("auto"),
+    })
+    .default({ zoom: 1, offsetX: 0, offsetY: 0, position: "auto" }),
 });
 
 export type CvContentInput = z.input<typeof cvContentSchema>;

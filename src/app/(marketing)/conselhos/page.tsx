@@ -95,7 +95,7 @@ export default function AdvicePage() {
 
       <div className="mt-10 rounded-2xl bg-brand-50 p-6 text-center">
         <p className="text-lg font-semibold text-ink">Pronto para começar?</p>
-        <ButtonLink href="/meu-espaco/cvs/novo" prefetch={false} size="lg" className="mt-4">
+        <ButtonLink href="/cv-modelos" size="lg" className="mt-4">
           Criar meu CV
         </ButtonLink>
       </div>

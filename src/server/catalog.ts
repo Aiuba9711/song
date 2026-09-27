@@ -1,27 +1,41 @@
 import "server-only";
 import { db } from "@/lib/db";
-import type { TemplateCategory } from "@/generated/prisma/enums";
+import { resolveDesign, type TemplateDesign } from "@/cv/design";
+import type { CvLayoutId } from "@/cv/types";
 
-export const CATEGORY_LABELS: Record<TemplateCategory, string> = {
-  GERAL: "Geral",
-  PRIMEIRO_EMPREGO: "Primeiro emprego",
-  ADMINISTRATIVO: "Administrativo",
-  CONTABILIDADE: "Contabilidade",
-  RECURSOS_HUMANOS: "Recursos Humanos",
-  SAUDE: "Saúde",
-  EDUCACAO: "Educação",
-  INFORMATICA: "Informática",
-  ENGENHARIA: "Engenharia",
-  VENDAS_MARKETING: "Vendas / Marketing",
-  EXECUTIVO: "Executivo",
-};
+export { CATEGORY_LABELS, CATEGORY_ORDER } from "@/cv/categories";
+
+const templateSelect = {
+  id: true,
+  slug: true,
+  name: true,
+  description: true,
+  category: true,
+  style: true,
+  layout: true,
+  accentColor: true,
+  design: true,
+  isAtsFriendly: true,
+  isPremium: true,
+  priceMinor: true,
+  previewImageUrl: true,
+  sortOrder: true,
+} as const;
+
+type TemplateRow = { layout: CvLayoutId; design: unknown; accentColor: string };
+
+function withDesign<T extends TemplateRow>(t: T): T & { resolvedDesign: TemplateDesign } {
+  return { ...t, resolvedDesign: resolveDesign(t) };
+}
 
 export async function listActiveTemplates() {
-  return db.cVTemplate.findMany({
-    where: { isActive: true },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: { id: true, slug: true, name: true, description: true, category: true, layout: true, accentColor: true, isPremium: true },
-  });
+  const rows = await db.cVTemplate.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }], select: templateSelect });
+  return rows.map(withDesign);
+}
+
+export async function getActiveTemplateBySlug(slug: string) {
+  const row = await db.cVTemplate.findFirst({ where: { slug, isActive: true }, select: templateSelect });
+  return row ? withDesign(row) : null;
 }
 
 export type TemplateSummary = Awaited<ReturnType<typeof listActiveTemplates>>[number];

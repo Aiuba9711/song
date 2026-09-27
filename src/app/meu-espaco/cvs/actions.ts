@@ -7,11 +7,32 @@ import { cvContentSchema, type CvContentInput } from "@/cv/schema";
 import { audit } from "@/lib/audit";
 import { assertUser, AuthError } from "@/lib/auth/guards";
 import { LIMITS, rateLimit } from "@/lib/security/rate-limit";
-import { detectFileType, MAX_PHOTO_BYTES } from "@/lib/storage/files";
-import { createCv, deleteCv, duplicateCv, removeCvPhoto, saveCv, setCvPhoto, setCvTemplate } from "@/server/cv";
+import { detectFileType, IMAGE_TYPES, MAX_PHOTO_BYTES } from "@/lib/storage/files";
+import { chooseTemplate, createCv, deleteCv, duplicateCv, removeCvPhoto, saveCv, setCvPhoto, setCvTemplate } from "@/server/cv";
 import { DomainError } from "@/server/users";
 
 const id = z.string().min(1).max(40);
+
+/**
+ * «Usar este modelo»: define o modelo atual da conta e abre o editor.
+ * Sem sessão, envia para o login e volta à escolha do modelo.
+ */
+export async function chooseTemplateAction(formData: FormData): Promise<void> {
+  const slug = z.string().trim().min(1).max(60).safeParse(formData.get("modelo"));
+  if (!slug.success) redirect("/cv-modelos");
+  const user = await assertUser().catch(() => null);
+  if (!user) redirect(`/registar?next=${encodeURIComponent(`/meu-espaco/cvs/novo?modelo=${slug.data}`)}`);
+  let cvId: string;
+  try {
+    ({ cvId } = await chooseTemplate(user.id, slug.data));
+  } catch (error) {
+    if (error instanceof DomainError) redirect(`/meu-espaco/cvs?erro=${error.code}`);
+    throw error;
+  }
+  await audit({ actorId: user.id, action: "cv.template_choose", entityType: "CV", entityId: cvId, metadata: { template: slug.data } });
+  revalidatePath("/meu-espaco/cvs");
+  redirect(`/meu-espaco/cvs/${cvId}/editar`);
+}
 
 export async function createCvAction(formData: FormData): Promise<void> {
   const user = await assertUser().catch(() => null);
@@ -87,7 +108,12 @@ export async function setTemplateAction(formData: FormData): Promise<void> {
   const user = await assertUser();
   const cvId = id.parse(formData.get("cvId"));
   const templateId = id.parse(formData.get("templateId"));
-  await setCvTemplate(user.id, cvId, templateId);
+  try {
+    await setCvTemplate(user.id, cvId, templateId);
+  } catch (error) {
+    if (error instanceof DomainError) redirect(`/meu-espaco/cvs?erro=${error.code}`);
+    throw error;
+  }
   revalidatePath(`/meu-espaco/cvs/${cvId}`);
   redirect(`/meu-espaco/cvs/${cvId}`);
 }
@@ -103,13 +129,13 @@ export async function uploadPhotoAction(cvId: string, formData: FormData): Promi
 
     const file = formData.get("photo");
     if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Escolha uma fotografia." };
-    if (file.size > MAX_PHOTO_BYTES) return { ok: false, error: "A fotografia deve ter no máximo 1,5 MB." };
+    if (file.size > MAX_PHOTO_BYTES) return { ok: false, error: "A fotografia deve ter no máximo 5 MB." };
     const data = Buffer.from(await file.arrayBuffer());
     const type = detectFileType(data);
-    if (!type || (type.mime !== "image/jpeg" && type.mime !== "image/png")) {
-      return { ok: false, error: "Formato não suportado. Use JPG ou PNG." };
+    if (!type || !IMAGE_TYPES.includes(type.mime)) {
+      return { ok: false, error: "Formato não suportado. Use JPG, PNG ou WEBP." };
     }
-    await setCvPhoto(user.id, parsedId, data, type.mime);
+    await setCvPhoto(user.id, parsedId, data);
     return { ok: true, url: `/api/cv/${parsedId}/photo?v=${Date.now()}` };
   } catch (error) {
     if (error instanceof AuthError || error instanceof DomainError) return { ok: false, error: error.message };

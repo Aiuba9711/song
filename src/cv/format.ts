@@ -6,7 +6,8 @@ export const SECTION_LABELS: Record<SectionKey, string> = {
   education: "Formação académica",
   skills: "Competências",
   languages: "Idiomas",
-  courses: "Cursos e certificações",
+  courses: "Cursos",
+  certifications: "Certificações",
   references: "Referências",
   custom: "Outras informações",
 };
@@ -74,6 +75,8 @@ export function isSectionVisible(cv: CvContent, key: SectionKey): boolean {
       return cv.languages.length > 0;
     case "courses":
       return cv.courses.length > 0;
+    case "certifications":
+      return cv.certifications.length > 0;
     case "references":
       return cv.references.length > 0 || cv.referencesOnRequest;
     case "custom":

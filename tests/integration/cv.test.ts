@@ -79,7 +79,7 @@ describe("privacidade: acesso apenas ao dono", () => {
     await expect(saveCv(intruder.id, id, cvContentSchema.parse(SAMPLE_CV))).rejects.toMatchObject({ code: "NOT_FOUND" });
     await expect(duplicateCv(intruder.id, id)).rejects.toMatchObject({ code: "NOT_FOUND" });
     await expect(deleteCv(intruder.id, id)).rejects.toMatchObject({ code: "NOT_FOUND" });
-    await expect(setCvPhoto(intruder.id, id, TINY_PNG, "image/png")).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(setCvPhoto(intruder.id, id, TINY_PNG)).rejects.toMatchObject({ code: "NOT_FOUND" });
     expect(await getUserCv(owner.id, id)).not.toBeNull();
   });
 });
@@ -89,7 +89,7 @@ describe("duplicar e eliminar", () => {
     const u = await createUser();
     const { id } = await createCv(u.id, { title: "CV Banco" });
     await saveCv(u.id, id, cvContentSchema.parse({ ...SAMPLE_CV, title: "CV Banco" }));
-    await setCvPhoto(u.id, id, TINY_PNG, "image/png");
+    await setCvPhoto(u.id, id, TINY_PNG);
 
     const copy = await duplicateCv(u.id, id);
     const original = (await getUserCv(u.id, id))!;
@@ -108,7 +108,7 @@ describe("duplicar e eliminar", () => {
     const u = await createUser();
     const { id } = await createCv(u.id, {});
     await saveCv(u.id, id, cvContentSchema.parse(SAMPLE_CV));
-    await setCvPhoto(u.id, id, TINY_PNG, "image/png");
+    await setCvPhoto(u.id, id, TINY_PNG);
     const key = (await getUserCv(u.id, id))!.photoKey!;
     await deleteCv(u.id, id);
     expect(await db.cV.count({ where: { id } })).toBe(0);

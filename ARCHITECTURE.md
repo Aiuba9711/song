@@ -19,7 +19,7 @@ Ver também: [DATABASE.md](./DATABASE.md), [PAYMENTS.md](./PAYMENTS.md), [SECURI
 | Autenticação | Registo email+senha, login, logout, recuperação de senha, sessão segura | 1 |
 | Meu Espaço | Meus CVs, documentos, kits, downloads, compras, perfil, eliminação de conta | 1 |
 | Gerador de CV | Formulário em 10 etapas, guardar, voltar, editar, duplicar, trocar modelo, pré-visualizar | 1 |
-| Modelos de CV | 3 layouts base (Fase 1) com variantes por profissão; ativar/desativar/categorizar | 1 (+3) |
+| Modelos de CV | Biblioteca de 40 modelos originais (22 áreas, 17 estilos) num motor de design declarativo; admin completo | 1 ✅ |
 | Exportação | PDF (envio por email/portais) e DOCX editável | 1 |
 | Admin | Dashboard, produtos, preços, ficheiros, modelos, utilizadores, pedidos, definições | 1 (básico) |
 | Cartas | Carta de candidatura e de motivação, PDF e DOCX | 2 |
@@ -94,7 +94,7 @@ pesadas.
    └─ Server Actions ...... mutações (validação zod + autorização + auditoria)
         │
         ├─ src/server/* .... serviços de domínio (cv, produtos, pedidos, utilizadores, definições)
-        ├─ src/cv/* ........ modelo de dados do CV + renderizadores (HTML, PDF, DOCX) por layout
+        ├─ src/cv/* ........ modelo de dados do CV + motor de design (HTML, PDF, DOCX)
         ├─ src/lib/* ....... auth, segurança, dinheiro, i18n, storage, email, auditoria
         ▼
  PostgreSQL (Prisma)      Armazenamento S3 (ficheiros de kits, fotos)      Email (Resend)
@@ -107,9 +107,12 @@ Princípios:
 2. **Autorização no servidor, sempre**: o `proxy.ts` é só conveniência; cada página/ação/rota
    verifica sessão e papel (`requireUser`, `requireRole`) e a posse do recurso (`cv.userId === user.id`).
 3. **Domínio isolado da UI**: `src/server/*` não conhece React; é testado diretamente contra a BD de teste.
-4. **Renderização de CV por layout**: cada layout implementa `Preview` (HTML), `renderPdf` e
-   `renderDocx` a partir do mesmo `CvData` normalizado — garante consistência entre pré-visualização,
-   PDF e Word.
+4. **Um motor de design para os 3 formatos**: cada modelo é um `TemplateDesign` declarativo
+   (`src/cv/design.ts`: estrutura, cabeçalho, títulos, tipografia, cor, densidade, entradas,
+   competências, forma/posição da foto…). `planDocument` (`src/cv/plan.ts`) decide o conteúdo e a
+   ordem; três renderizadores (HTML `src/cv/preview`, PDF `src/cv/pdf`, DOCX `src/cv/docx`) desenham
+   o mesmo plano com as mesmas medidas (pt) — a pré-visualização corresponde ao documento final.
+   Os testes verificam, para cada um dos modelos, que nenhum campo desaparece em nenhum formato.
 5. **Integrações por interfaces** (`StorageProvider`, `EmailProvider`, `PaymentProvider`, futuro
    `AiProvider`), escolhidas por variáveis de ambiente. Integrações não disponíveis ficam como mocks
    **claramente identificados**.
@@ -159,7 +162,8 @@ Princípios:
 │  │  └─ marketing/            # secções da landing
 │  ├─ cv/
 │  │  ├─ types.ts, schema.ts   # CvData + validação
-│  │  ├─ layouts/              # registo de layouts (classico, moderno, executivo)
+│  │  ├─ design.ts, plan.ts    # motor de design (TemplateDesign → plano do documento)
+│  │  ├─ catalog.ts            # os 40 modelos originais (seed)
 │  │  ├─ preview/              # componentes HTML de pré-visualização
 │  │  ├─ pdf/                  # documentos @react-pdf
 │  │  ├─ docx/                 # geradores docx
@@ -260,3 +264,30 @@ Assistente de IA (sem inventar dados), personalização avançada de CV, assinat
 
 ### Fase 5
 App Android (Trusted Web Activity a partir da PWA).
+
+
+## Biblioteca de CVs
+
+**Fluxo.** «Criar meu CV» → `/cv-modelos` (galeria pública, filtros por área/ATS/com-sem foto) →
+«Usar este modelo» (`chooseTemplateAction`; sem sessão → registo e volta) → editor
+`/meu-espaco/cvs/[id]/editar`. A conta guarda `currentCvTemplateId`. Com o CV pago ativo existe no
+máximo **um CV por comprar** (`DRAFT_EXISTS`): escolher outro modelo troca o modelo desse CV (os dados
+mantêm-se). Após a compra (`CV.purchasedAt`) o modelo fica fixo e pode começar-se outro CV.
+
+**Editor.** Formulário à esquerda e pré-visualização HTML em tempo real à direita (`lg+`); no
+telemóvel o formulário vem primeiro e a pré-visualização logo abaixo. Barra: SALVAR, PRÉ-VISUALIZAR
+(ecrã inteiro + PDF `/api/cv/[id]/preview`), COMPRAR CV — preço do modelo. Antes da compra a
+pré-visualização (HTML e PDF) tem marca d'água discreta; depois há PDF limpo e DOCX editável.
+
+**Fotografia.** No telemóvel é reduzida (≤1400 px) e comprimida antes do envio; no servidor
+(`src/lib/photo.ts`, sharp) é validada, rodada pelo EXIF, **sem metadados**, ≤1200 px, JPEG. O
+enquadramento (zoom, deslocação X/Y) usa a mesma fórmula (`src/lib/photo-framing.ts`) no editor (CSS)
+e no servidor (recorte 600 px para PDF; PNG com máscara circular/arredondada para o Word).
+
+**Imagens da galeria.** `npm run templates:previews` gera `public/templates/<slug>.jpg` e
+`<slug>-sem-foto.jpg` (400 px, ~20 KB) com o próprio motor, dados fictícios e uma silhueta; o admin
+pode carregar uma imagem própria (`/api/templates/[id]/preview`). Sem imagem, a galeria desenha o
+modelo ao vivo.
+
+**Selo ATS.** `isAtsCompatible(design)`: uma coluna, cabeçalho simples, títulos em texto, entradas
+clássicas, competências em lista/linha, sem tabelas nem etiquetas. Calculado — não é escolha manual.

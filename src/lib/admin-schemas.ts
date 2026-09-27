@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { CATEGORY_LABELS } from "@/cv/categories";
+import type { TemplateCategory } from "@/generated/prisma/enums";
 import { parseMoneyInput } from "@/lib/money";
 
 const optionalText = (max: number) =>
@@ -74,6 +76,7 @@ export const productSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).max(10000).default(0),
 });
 
+/** Modelo de CV (admin): dados gerais + preço opcional por modelo + design. */
 export const templateSchema = z.object({
   name: z.string().trim().min(2).max(60),
   slug: z
@@ -84,12 +87,14 @@ export const templateSchema = z.object({
     .min(2)
     .max(60),
   description: z.string().trim().min(10, "Descrição demasiado curta.").max(300),
-  category: z.enum(["GERAL", "PRIMEIRO_EMPREGO", "ADMINISTRATIVO", "CONTABILIDADE", "RECURSOS_HUMANOS", "SAUDE", "EDUCACAO", "INFORMATICA", "ENGENHARIA", "VENDAS_MARKETING", "EXECUTIVO"]),
-  layout: z.enum(["CLASSICO", "MODERNO", "EXECUTIVO"]),
+  category: z.enum(Object.keys(CATEGORY_LABELS) as [TemplateCategory, ...TemplateCategory[]]),
+  style: z.string().trim().min(2, "Indique o estilo.").max(40),
   accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Cor inválida (use #RRGGBB)."),
   sortOrder: z.coerce.number().int().min(0).max(10000).default(0),
   isActive: z.literal("on").optional().transform((v) => v === "on"),
   isPremium: z.literal("on").optional().transform((v) => v === "on"),
+  /** Vazio = usa o valor padrão de Configurações › Pagamentos */
+  price: money("preço", false),
 });
 
 const url = z

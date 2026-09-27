@@ -2,29 +2,37 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CvBuilder, type BuilderTemplate } from "@/cv/builder/cv-builder";
 import { requireUser } from "@/lib/auth/guards";
-import { CATEGORY_LABELS, listActiveTemplates } from "@/server/catalog";
 import { formatMoney } from "@/lib/money";
-import { getCvDownloadAccess } from "@/server/checkout";
-import { getUserCv, toCvContent } from "@/server/cv";
+import { canDownloadCv, getCvPrice } from "@/server/checkout";
+import { designOf, getUserCv, toCvContent } from "@/server/cv";
+import { getGalleryTemplates } from "@/server/gallery";
 
 export const metadata: Metadata = { title: "Editar CV" };
 
-export default async function EditCvPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ passo?: string }> }) {
-  const [{ id }, { passo }] = await Promise.all([params, searchParams]);
+export default async function EditCvPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ passo?: string; trocar?: string }> }) {
+  const [{ id }, { passo, trocar }] = await Promise.all([params, searchParams]);
   const user = await requireUser(`/meu-espaco/cvs/${id}/editar`);
-  const [cv, templates, access] = await Promise.all([getUserCv(user.id, id), listActiveTemplates(), getCvDownloadAccess(user.id)]);
+  const [cv, templates] = await Promise.all([getUserCv(user.id, id), getGalleryTemplates()]);
   if (!cv) notFound();
+  const [unlocked, price] = await Promise.all([canDownloadCv(user.id, cv.id), getCvPrice(cv.template?.priceMinor)]);
 
-  const builderTemplates: BuilderTemplate[] = templates.map((t) => ({
-    id: t.id,
-    name: t.name,
-    layout: t.layout,
-    accentColor: t.accentColor,
-    categoryLabel: CATEGORY_LABELS[t.category],
-  }));
-  // Se o modelo atual foi desativado, mantém-no visível para este CV.
+  const builderTemplates: BuilderTemplate[] = [...templates];
+  // Se o modelo deste CV foi desativado, mantém-no disponível para este CV.
   if (cv.template && !builderTemplates.some((t) => t.id === cv.template!.id)) {
-    builderTemplates.unshift({ id: cv.template.id, name: cv.template.name, layout: cv.template.layout, accentColor: cv.template.accentColor, categoryLabel: "Indisponível" });
+    builderTemplates.unshift({
+      id: cv.template.id,
+      slug: cv.template.slug,
+      name: cv.template.name,
+      category: "INDISPONIVEL",
+      categoryLabel: "Indisponível",
+      style: cv.template.style,
+      description: "",
+      isAtsFriendly: cv.template.isAtsFriendly,
+      previewImageUrl: null,
+      design: designOf(cv),
+      priceMinor: price.priceMinor,
+      priceLabel: formatMoney(price.priceMinor, price.currency),
+    });
   }
 
   const step = Number(passo) || cv.currentStep || 1;
@@ -35,8 +43,9 @@ export default async function EditCvPage({ params, searchParams }: { params: Pro
       initialStep={step}
       updatedAt={cv.updatedAt.toISOString()}
       templates={builderTemplates}
-      initialPhotoUrl={cv.photoKey ? `/api/cv/${cv.id}/photo?v=${cv.updatedAt.getTime()}` : null}
-      downloadLock={access.paywall && !access.unlocked.has(cv.id) ? { priceLabel: formatMoney(access.priceMinor, access.currency) } : null}
+      initialPhotoVersion={cv.photoKey ? cv.updatedAt.getTime() : null}
+      openTemplates={trocar === "1" && !cv.purchasedAt}
+      purchase={{ unlocked, purchased: !!cv.purchasedAt, priceLabel: formatMoney(price.priceMinor, price.currency) }}
     />
   );
 }

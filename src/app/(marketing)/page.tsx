@@ -15,14 +15,14 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { TemplateThumb } from "@/components/cv/template-thumb";
+import { AtsBadge, TemplatePreview } from "@/components/templates/gallery";
 import { Faq } from "@/components/marketing/faq";
 import { JsonLd } from "@/components/seo/json-ld";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { LAYOUTS } from "@/cv/layouts";
 import { formatMoney } from "@/lib/money";
 import { getFeaturedProduct } from "@/server/catalog";
+import { getGalleryTemplates } from "@/server/gallery";
 import { getPublicPaymentSummary } from "@/server/payments/settings";
 
 export const revalidate = 3600;
@@ -37,16 +37,16 @@ const PROBLEMS = [
 ];
 
 const SOLUTIONS = [
-  { icon: FileText, title: "CV profissional", text: "Modelos modernos e editáveis. Preencha passo a passo e descarregue em PDF e Word.", href: "/meu-espaco/cvs/novo", cta: "Criar CV" },
+  { icon: FileText, title: "CV profissional", text: "Modelos modernos e editáveis. Preencha passo a passo e descarregue em PDF e Word.", href: "/cv-modelos", cta: "Ver modelos" },
   { icon: PenLine, title: "Cartas", text: "Modelos de carta de candidatura e de motivação, com orientação para cada parágrafo.", href: "/kits/modelo-gratuito", cta: "Modelo grátis" },
   { icon: ClipboardList, title: "Entrevista", text: "Perguntas frequentes, o que o recrutador avalia e como estruturar a resposta.", href: "/kits", cta: "Ver kits" },
   { icon: MessageSquareText, title: "Candidaturas", text: "Modelos de email e de mensagem de WhatsApp para contactar recrutadores.", href: "/kits", cta: "Ver kits" },
 ];
 
 const STEPS = [
-  { icon: UserPlus, title: "Crie a sua conta", text: "É grátis e leva menos de um minuto." },
+  { icon: UserPlus, title: "Escolha um modelo", text: "Mais de 36 modelos por área profissional. Crie a conta grátis em menos de um minuto." },
   { icon: PenLine, title: "Preencha passo a passo", text: "Dados, experiência, formação, competências — com dicas em cada etapa." },
-  { icon: Download, title: "Descarregue", text: "Escolha o modelo, veja a pré-visualização e baixe em PDF ou Word." },
+  { icon: Download, title: "Descarregue", text: "Veja a pré-visualização em tempo real e baixe em PDF ou Word." },
 ];
 
 const FAQ = [
@@ -57,12 +57,15 @@ const FAQ = [
 ];
 
 export default async function HomePage() {
-  const [featured, payments] = await Promise.all([getFeaturedProduct(), getPublicPaymentSummary()]);
+  const [featured, payments, templates] = await Promise.all([getFeaturedProduct(), getPublicPaymentSummary(), getGalleryTemplates().catch(() => [])]);
+  // Uma amostra variada: um modelo por estilo.
+  const showcase = templates.filter((t, i) => templates.findIndex((x) => x.style === t.style) === i).slice(0, 6);
+  const hero = [templates.find((t) => t.slug === "horizonte") ?? templates[0], templates.find((t) => t.slug === "executivo") ?? templates[1]];
   const faq = [
     payments.cvPaywallEnabled
       ? {
           q: "Criar o CV é gratuito?",
-          a: `Criar, editar e pré-visualizar é gratuito. O download final em PDF e Word custa ${formatMoney(payments.cvPriceMinor, payments.currency)} por CV, pago por M-Pesa, e-Mola ou mKesh.`,
+          a: `Escolher o modelo, preencher e pré-visualizar é gratuito. O CV final — PDF sem marca d'água e Word editável — custa ${formatMoney(payments.cvPriceMinor, payments.currency)} por CV, pago por M-Pesa, e-Mola ou mKesh.`,
         }
       : { q: "Criar o CV é gratuito?", a: "Sim. Pode criar, editar e descarregar os seus CVs em PDF e Word gratuitamente. Os kits com materiais adicionais são pagos." },
     ...FAQ,
@@ -85,7 +88,7 @@ export default async function HomePage() {
               Modelos de CV, cartas de candidatura, preparação para entrevistas e ferramentas práticas para quem procura emprego em Moçambique.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <ButtonLink href="/meu-espaco/cvs/novo" prefetch={false} size="lg" icon={<FileText className="size-5" aria-hidden />}>
+              <ButtonLink href="/cv-modelos" size="lg" icon={<FileText className="size-5" aria-hidden />}>
                 Criar meu CV
               </ButtonLink>
               <ButtonLink href="/kits" size="lg" variant="outline">
@@ -93,7 +96,7 @@ export default async function HomePage() {
               </ButtonLink>
             </div>
             <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600">
-              {["Grátis para começar", "PDF e Word", "Funciona no telemóvel"].map((t) => (
+              {["36+ modelos profissionais", "PDF e Word", "Funciona no telemóvel"].map((t) => (
                 <li key={t} className="flex items-center gap-1.5">
                   <BadgeCheck className="size-4 text-go-600" aria-hidden />
                   {t}
@@ -104,12 +107,16 @@ export default async function HomePage() {
           <div className="relative mx-auto hidden sm:block" aria-hidden>
             <div className="absolute -inset-6 rounded-[2rem] bg-brand-100/60 blur-2xl" />
             <div className="relative flex gap-4">
-              <div className="rotate-[-3deg] rounded-xl shadow-lift">
-                <TemplateThumb layout="MODERNO" accentColor="#1d40d8" width={260} />
-              </div>
-              <div className="mt-10 hidden rotate-[3deg] rounded-xl shadow-lift lg:block">
-                <TemplateThumb layout="EXECUTIVO" accentColor="#0f172a" width={200} />
-              </div>
+              {hero[0] && (
+                <div className="w-[260px] rotate-[-3deg] overflow-hidden rounded-xl shadow-lift">
+                  <TemplatePreview t={hero[0]} withPhoto width={260} />
+                </div>
+              )}
+              {hero[1] && (
+                <div className="mt-10 hidden w-[200px] rotate-[3deg] overflow-hidden rounded-xl shadow-lift lg:block">
+                  <TemplatePreview t={hero[1]} withPhoto width={200} />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -199,21 +206,26 @@ export default async function HomePage() {
               <h2 id="modelos" className="text-3xl font-bold tracking-tight">
                 Modelos para diferentes profissões
               </h2>
-              <p className="mt-2 text-slate-600">Escolha o estilo e troque de modelo quando quiser — os seus dados mantêm-se.</p>
+              <p className="mt-2 text-slate-600">
+                Mais de 36 modelos originais em 22 áreas — de Primeiro Emprego a Executivo. Troque de modelo até finalizar; os seus dados mantêm-se.
+              </p>
             </div>
             <ButtonLink href="/cv-modelos" variant="secondary">
               Ver todos os modelos
             </ButtonLink>
           </div>
-          <ul className="mt-8 flex snap-x gap-5 overflow-x-auto pb-4 sm:grid sm:grid-cols-3 sm:overflow-visible">
-            {(Object.values(LAYOUTS) as Array<(typeof LAYOUTS)[keyof typeof LAYOUTS]>).map((l, i) => (
-              <li key={l.id} className="shrink-0 snap-start">
-                <Link href="/cv-modelos" className="group block rounded-2xl p-3 transition-colors hover:bg-slate-50">
-                  <div className="flex justify-center">
-                    <TemplateThumb layout={l.id} accentColor={["#1d40d8", "#0e7490", "#0f172a"][i]!} width={230} />
+          <ul className="mt-8 flex snap-x gap-4 overflow-x-auto pb-4 sm:grid sm:grid-cols-3 sm:overflow-visible lg:grid-cols-6">
+            {showcase.map((t) => (
+              <li key={t.slug} className="w-[200px] shrink-0 snap-start sm:w-auto">
+                <Link href={`/cv-modelos/${t.slug}`} className="group block rounded-2xl p-2 transition-colors hover:bg-slate-50">
+                  <div className="overflow-hidden rounded-lg ring-1 ring-slate-200">
+                    <TemplatePreview t={t} withPhoto width={200} />
                   </div>
-                  <h3 className="mt-3 font-semibold group-hover:text-brand-700">{l.name}</h3>
-                  <p className="mt-1 max-w-[260px] text-sm text-slate-600">{l.description}</p>
+                  <h3 className="mt-2 font-semibold group-hover:text-brand-700">{t.name}</h3>
+                  <p className="text-xs text-slate-500">
+                    {t.categoryLabel} · {t.style}
+                  </p>
+                  {t.isAtsFriendly && <AtsBadge className="mt-1" />}
                 </Link>
               </li>
             ))}
@@ -268,7 +280,7 @@ export default async function HomePage() {
       <section className="container-page py-14 text-center">
         <h2 className="text-3xl font-bold tracking-tight">O teu próximo emprego começa com uma boa candidatura.</h2>
         <p className="mx-auto mt-3 max-w-xl text-slate-600">Crie agora o seu CV — é grátis e pode editar sempre que precisar.</p>
-        <ButtonLink href="/meu-espaco/cvs/novo" prefetch={false} size="lg" className="mt-6">
+        <ButtonLink href="/cv-modelos" size="lg" className="mt-6">
           Criar meu CV
         </ButtonLink>
       </section>

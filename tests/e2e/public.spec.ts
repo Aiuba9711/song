@@ -21,8 +21,25 @@ test.describe("páginas públicas", () => {
 
   test("catálogo de modelos e kits com preços da base de dados", async ({ page }) => {
     await page.goto("/cv-modelos");
-    await expect(page.getByRole("heading", { name: "Modelos de CV", level: 1 })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Usar este modelo" })).toHaveCount(10);
+    await expect(page.getByRole("heading", { name: "Escolha o modelo do seu CV", level: 1 })).toBeVisible();
+    const choose = page.getByRole("button", { name: "Usar este modelo" });
+    expect(await choose.count()).toBeGreaterThanOrEqual(36);
+    // Filtros: área e compatíveis com ATS
+    await page.getByRole("button", { name: "Enfermagem", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Enfermagem", level: 3 })).toBeVisible();
+    expect(await choose.count()).toBeLessThan(5);
+    await page.getByRole("button", { name: "Todos", exact: true }).click();
+    await page.getByLabel("Só compatíveis com ATS").check();
+    const atsCount = await choose.count();
+    expect(atsCount).toBeGreaterThanOrEqual(6);
+    await expect(page.getByRole("listitem").filter({ hasText: "Compatível com ATS" })).toHaveCount(atsCount);
+    await expectNoHorizontalScroll(page);
+    // Página do modelo: preço da base de dados e pré-visualização com/sem foto
+    await page.getByRole("link", { name: "Primeiro Emprego" }).first().click();
+    await expect(page.getByRole("heading", { name: "Modelo Primeiro Emprego", level: 1 })).toBeVisible();
+    await expect(page.getByText(/^\d[\d ]* MT$/).first()).toBeVisible();
+    await page.getByRole("button", { name: "Sem foto" }).click();
+    await expect(page.getByRole("img", { name: /sem fotografia/ }).first()).toBeVisible();
     await page.goto("/kits");
     // Preços vêm da base de dados (o teste de admin pode alterar o kit Básico).
     await expect(page.getByText("399 MT").first()).toBeVisible();

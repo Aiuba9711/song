@@ -90,6 +90,7 @@ describe("criação de pedido e cálculo de preço", () => {
   });
 
   it("CV: preço = valor padrão da configuração, só com download pago ativo e só para o dono", async () => {
+    await createPaymentSettings({ cvPaywallEnabled: false });
     const user = await createUser();
     const other = await createUser();
     const { id } = await createCv(user.id, { title: "CV Banco" });
@@ -238,7 +239,8 @@ describe("proteção de downloads", () => {
     const admin = await createUser({ role: "ADMIN" });
     await createSession(user.id);
     const { id } = await createCv(user.id, {});
-    const { id: otherCv } = await createCv(user.id, {});
+    // Só um CV por comprar de cada vez: não é possível acumular modelos gratuitamente.
+    await expect(createCv(user.id, {})).rejects.toMatchObject({ code: "DRAFT_EXISTS" });
     await saveCv(user.id, id, cvContentSchema.parse(SAMPLE_CV));
     const params = { params: Promise.resolve({ id }) };
     expect((await cvPdf(new Request("http://x"), params)).status).toBe(402);
@@ -250,10 +252,20 @@ describe("proteção de downloads", () => {
     expect((await cvPdf(new Request("http://x"), params)).status).toBe(402);
     await getManualProvider("EMOLA").verifyPayment(payment.id, { decision: "CONFIRM", reviewer: { id: admin.id, role: "ADMIN" } });
     expect((await cvPdf(new Request("http://x"), params)).status).toBe(200);
+    expect((await db.cV.findUniqueOrThrow({ where: { id } })).purchasedAt).not.toBeNull();
+    // Depois da compra pode começar outro CV — que continua bloqueado até ser pago.
+    const { id: otherCv } = await createCv(user.id, {});
     expect(await canDownloadCv(user.id, otherCv)).toBe(false);
   });
 
-  it("com download gratuito (predefinição) o dono descarrega sem pagar", async () => {
+  it("por omissão o CV é pago", async () => {
+    const user = await createUser();
+    const { id } = await createCv(user.id, {});
+    expect(await canDownloadCv(user.id, id)).toBe(false);
+  });
+
+  it("com o download gratuito ativado pelo admin, o dono descarrega sem pagar", async () => {
+    await createPaymentSettings({ cvPaywallEnabled: false });
     const user = await createUser();
     const { id } = await createCv(user.id, {});
     expect(await canDownloadCv(user.id, id)).toBe(true);

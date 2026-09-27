@@ -11,6 +11,7 @@ export const SECTION_KEYS = [
   "skills",
   "languages",
   "courses",
+  "certifications",
   "references",
   "custom",
 ] as const;
@@ -55,6 +56,16 @@ export type CvCourse = { name: string; institution: string; year: string };
 export type CvReference = { name: string; position: string; company: string; phone: string; email: string };
 export type CvCustomSection = { title: string; content: string };
 
+/** Enquadramento e posição da fotografia (escolhidos pelo utilizador). */
+export type CvPhotoSettings = {
+  zoom: number; // 1–3
+  offsetX: number; // -1 … 1
+  offsetY: number; // -1 … 1
+  position: "auto" | "left" | "right" | "center";
+};
+
+export const DEFAULT_PHOTO_SETTINGS: CvPhotoSettings = { zoom: 1, offsetX: 0, offsetY: 0, position: "auto" };
+
 export type CvContent = {
   title: string;
   templateId: string | null;
@@ -65,15 +76,12 @@ export type CvContent = {
   skills: CvSkill[];
   languages: CvLanguage[];
   courses: CvCourse[];
+  certifications: CvCourse[];
   references: CvReference[];
   referencesOnRequest: boolean;
   customSections: CvCustomSection[];
   hiddenSections: SectionKey[];
-};
-
-export type CvTheme = {
-  layout: CvLayoutId;
-  accentColor: string;
+  photoSettings: CvPhotoSettings;
 };
 
 /** Foto já carregada (para PDF/DOCX). */
@@ -101,9 +109,11 @@ export function emptyCvContent(title = "O meu CV"): CvContent {
     skills: [],
     languages: [],
     courses: [],
+    certifications: [],
     references: [],
     referencesOnRequest: false,
     customSections: [],
     hiddenSections: [],
+    photoSettings: { ...DEFAULT_PHOTO_SETTINGS },
   };
 }

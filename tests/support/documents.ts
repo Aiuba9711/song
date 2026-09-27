@@ -1,6 +1,27 @@
 import { inflateSync } from "node:zlib";
 import JSZip from "jszip";
 
+/** Descodifica WinAnsi (cp1252) — codificação das fontes padrão do PDF. */
+const CP1252: Record<number, string> = { 0x80: "€", 0x82: "‚", 0x84: "„", 0x85: "…", 0x91: "‘", 0x92: "’", 0x93: "“", 0x94: "”", 0x95: "•", 0x96: "–", 0x97: "—", 0x99: "™" };
+function decodeWinAnsi(buf: Buffer): string {
+  let out = "";
+  for (const b of buf) out += CP1252[b] ?? String.fromCharCode(b);
+  return out;
+}
+
+/** Texto de um DOCX (conteúdo de todos os <w:t>). */
+export async function docxText(docx: Buffer): Promise<string> {
+  const xml = await docxXml(docx);
+  return [...xml.matchAll(/<w:t(?: [^>]*)?>([^<]*)<\/w:t>/g)]
+    .map((m) => m[1]!)
+    .join("")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'");
+}
+
 /** Extrai o texto aproximado de um PDF (streams FlateDecode + strings hex/literais). */
 export function pdfText(pdf: Buffer): string {
   const raw = pdf.toString("latin1");
@@ -14,7 +35,7 @@ export function pdfText(pdf: Buffer): string {
     } catch {
       continue;
     }
-    for (const hex of content.matchAll(/<([0-9a-fA-F]+)>/g)) out.push(Buffer.from(hex[1]!, "hex").toString("latin1"));
+    for (const hex of content.matchAll(/<([0-9a-fA-F]+)>/g)) out.push(decodeWinAnsi(Buffer.from(hex[1]!, "hex")));
     for (const lit of content.matchAll(/\(((?:\\.|[^\\)])*)\)\s*Tj/g)) out.push(lit[1]!);
   }
   return out.join("");

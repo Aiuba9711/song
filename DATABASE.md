@@ -44,10 +44,12 @@ SiteSettings (linha única "default") · Lead · RateLimitBucket
 
 | Modelo | Descrição |
 |---|---|
-| `CVTemplate` | Variante de um **layout** implementado em código (`CLASSICO`, `MODERNO`, `EXECUTIVO`) com categoria, cor, ordem, `isActive`, `isPremium`. |
-| `CV` | Dados pessoais, resumo, `hiddenSections`, `referencesOnRequest`, `photoKey` (ficheiro privado), `currentStep` do assistente. |
+| `CVTemplate` | Modelo da biblioteca: `slug`, `name`, `description`, `category` (22 áreas), `style`, `accentColor`, `design` (JSON `TemplateDesign`), `isAtsFriendly` (calculado do design), `priceMinor` (opcional; vazio = valor padrão de `PaymentSettings`), `previewImageUrl`/`previewImageKey`, `sortOrder`, `isActive`, `isPremium`. `layout` fica como família de base (compatibilidade). |
+| `CV` | Dados pessoais, resumo, `hiddenSections`, `referencesOnRequest`, `photoKey` (ficheiro privado, JPEG sem metadados), enquadramento `photoZoom`/`photoOffsetX`/`photoOffsetY`, `photoPosition`, `currentStep` do editor, `purchasedAt` (compra confirmada → modelo fixo). |
 | `CVExperience`, `CVEducation` | Datas em texto livre ("Mar 2022"), `isCurrent`, descrição com marcadores. `sortOrder`. |
-| `CVSkill`, `CVLanguage`, `CVCourse`, `CVReference`, `CVCustomSection` | Listas ordenadas. |
+| `CVSkill`, `CVLanguage`, `CVCourse`, `CVReference`, `CVCustomSection` | Listas ordenadas. `CVCourse.kind` = `COURSE` ou `CERTIFICATION`. |
+
+`User.currentCvTemplateId` guarda o modelo atual escolhido na galeria.
 
 Guardar um CV substitui todas as listas numa transação (simples e consistente com o assistente).
 
@@ -60,7 +62,7 @@ Guardar um CV substitui todas as listas numa transação (simples e consistente 
 | `Order` | `number` legível (`EF-AAAAMMDD-XXXX`), dados do cliente copiados, totais, estado (`PENDING`, `AWAITING_PAYMENT`, `PENDING_VERIFICATION`, `PAID`, `FAILED`, `CANCELLED`, `REFUNDED`), `paidAt`, `cancelledAt`. |
 | `OrderItem` | `kind` (`PRODUCT` ou `CV_UNLOCK`), `productId` ou `cvId`, cópia do nome e preço no momento da compra. |
 | `Payment` | Tentativa de pagamento: `provider` (`FREE`, `MOCK`, `MPESA`, `EMOLA`, `MKESH`, `CARD`), `mode` (`MANUAL`/`API`), `status` (`PENDING`, `PENDING_VERIFICATION`, `RESUBMISSION_REQUESTED`, `SUCCEEDED`, `REJECTED`, `FAILED`, `CANCELLED`, `REFUNDED`). Manual: `payeeNumber` (cópia do número de destino), `payerName`, `payerPhone`, `transactionId`, `reportedPaidAt`, `proofKey`/`proofMime` (comprovativo privado), `submittedAt`, `reviewedAt`, `reviewedById`, `reviewNote`. API: `providerReference` (único por fornecedor). |
-| `PaymentSettings` | Linha única: números e estado de M-Pesa/e-Mola/mKesh, titular, instruções, moeda, valor padrão (download de CV), `cvPaywallEnabled`, `cardEnabled` (sempre falso sem gateway). Editável no admin. |
+| `PaymentSettings` | Linha única: números e estado de M-Pesa/e-Mola/mKesh, titular, instruções, moeda, valor padrão do CV (199 MT no seed), `cvPaywallEnabled` (ligado por omissão), `cardEnabled` (sempre falso sem gateway). Editável no admin. |
 | `Coupon` | Percentagem **ou** valor fixo, validade, limite de utilizações, produtos aplicáveis (vazio = todos). *(Fase 2)* |
 | `Download` | Histórico (CV PDF/DOCX, ficheiros de produto). |
 

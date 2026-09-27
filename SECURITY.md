@@ -30,6 +30,7 @@ e todas as verificações acontecem no servidor.
 ## Proteção de dados
 
 - **CVs nunca públicos**: sem URLs partilháveis; PDF/DOCX gerados a pedido para o dono; respostas com `Cache-Control: private, no-store` e `X-Robots-Tag: noindex`.
+- **Fotografias** nunca são públicas: só o dono as vê (`/api/cv/[id]/photo`, enquadrada; `?raw=1` apenas para o editor de enquadramento), e só entram no PDF/DOCX do próprio. A galeria usa uma silhueta genérica e dados fictícios.
 - **Fotografias** e **ficheiros de kits** em armazenamento privado (bucket S3 privado); chaves aleatórias (UUID); servidos após verificação de posse / pedido pago; com S3, URL assinado de 5 minutos.
 - **Service worker** nunca guarda em cache `/meu-espaco`, `/admin`, `/api` nem páginas de autenticação.
 - **Eliminação de conta** (Perfil): apaga CVs, fotos, sessões, downloads e perfil; pedidos pagos mantidos por obrigações contabilísticas, desligados da conta; pedidos não pagos anonimizados.
@@ -53,7 +54,7 @@ e todas as verificações acontecem no servidor.
 - React escapa todo o conteúdo; não há `dangerouslySetInnerHTML` com dados de utilizador. JSON-LD escapa `<`.
 - Cores de modelos validadas (`#RRGGBB`) antes de chegar a estilos/PDF/DOCX.
 - URLs de redes sociais: apenas `https://`.
-- Uploads validados por **magic bytes** (não pela extensão): fotos JPG/PNG ≤ 1,5 MB; ficheiros de produto PDF/DOCX/XLSX/PPTX/ZIP ≤ 4 MB. SVG/HTML rejeitados.
+- Uploads validados por **magic bytes** (não pela extensão): fotos JPG/PNG/WEBP ≤ 5 MB (reduzidas no telemóvel antes do envio), re-codificadas no servidor com sharp (limite de píxeis, orientação EXIF aplicada e **todos os metadados removidos**, incluindo GPS); imagens de pré-visualização de modelos (admin) ≤ 3 MB, também re-codificadas; ficheiros de produto PDF/DOCX/XLSX/PPTX/ZIP ≤ 4 MB. SVG/HTML rejeitados.
 - `Content-Disposition` com nomes sanitizados; `X-Content-Type-Options: nosniff`.
 - Parâmetros de erro no URL usam **códigos** mapeados para mensagens (sem texto arbitrário refletido).
 - Storage local protegido contra path traversal.

@@ -1,11 +1,8 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import { Camera, Plus, Trash2, X } from "lucide-react";
-import { Alert } from "@/components/ui/alert";
+import { useState } from "react";
+import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
-import { removePhotoAction, uploadPhotoAction } from "@/app/meu-espaco/cvs/actions";
 import { LANGUAGE_LEVELS, SECTION_LABELS, SKILL_LEVELS } from "../format";
 import type { CvContent, CvCourse, CvCustomSection, CvEducation, CvExperience, CvReference, SectionKey } from "../types";
 import { ListEditor, SelectField, TextAreaField, TextField, Tip, Toggle } from "./fields";
@@ -17,7 +14,7 @@ export type StepProps = {
 };
 
 // ─── 1. Dados pessoais ──────────────────────────────────────
-export function PersonalStep({ cv, set, errors, cvId, photoUrl, onPhotoChange }: StepProps & { cvId: string; photoUrl: string | null; onPhotoChange: (url: string | null) => void }) {
+export function PersonalStep({ cv, set, errors }: StepProps) {
   const p = cv.personal;
   const setP = (patch: Partial<CvContent["personal"]>) => set((c) => ({ ...c, personal: { ...c.personal, ...patch } }));
   return (
@@ -39,104 +36,6 @@ export function PersonalStep({ cv, set, errors, cvId, photoUrl, onPhotoChange }:
           <TextField id="website" label="Website / portefólio" optional value={p.website} onChange={(v) => setP({ website: v })} maxLength={200} />
         </div>
       </details>
-      <PhotoField cvId={cvId} photoUrl={photoUrl} onPhotoChange={onPhotoChange} showPhoto={p.showPhoto} setShowPhoto={(v) => setP({ showPhoto: v })} />
-    </div>
-  );
-}
-
-function PhotoField({
-  cvId,
-  photoUrl,
-  onPhotoChange,
-  showPhoto,
-  setShowPhoto,
-}: {
-  cvId: string;
-  photoUrl: string | null;
-  onPhotoChange: (url: string | null) => void;
-  showPhoto: boolean;
-  setShowPhoto: (v: boolean) => void;
-}) {
-  const input = useRef<HTMLInputElement>(null);
-  const [pending, start] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
-  const upload = (file: File) => {
-    setError(null);
-    const fd = new FormData();
-    fd.append("photo", file);
-    start(async () => {
-      const res = await uploadPhotoAction(cvId, fd);
-      if (res.ok) {
-        onPhotoChange(res.url);
-        setShowPhoto(true);
-      } else setError(res.error);
-    });
-  };
-
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
-      <p className="font-medium text-slate-800">
-        Fotografia <span className="font-normal text-slate-500">(opcional)</span>
-      </p>
-      <p className="text-sm text-slate-500">JPG ou PNG até 1,5 MB. Use uma foto simples, de frente e com fundo neutro.</p>
-      <div className="mt-3 flex flex-wrap items-center gap-4">
-        {photoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- ficheiro privado
-          <img src={photoUrl} alt="Fotografia atual do CV" className="size-20 rounded-full object-cover ring-2 ring-slate-200" />
-        ) : (
-          <div className="grid size-20 place-items-center rounded-full bg-slate-100 text-slate-400">
-            <Camera className="size-8" aria-hidden />
-          </div>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <input
-            ref={input}
-            type="file"
-            accept="image/jpeg,image/png"
-            className="sr-only"
-            id="photo-input"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) upload(f);
-              e.target.value = "";
-            }}
-          />
-          <Button variant="outline" size="sm" onClick={() => input.current?.click()} disabled={pending} icon={pending ? <Spinner /> : <Camera className="size-4" aria-hidden />}>
-            {photoUrl ? "Trocar foto" : "Adicionar foto"}
-          </Button>
-          {photoUrl && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-red-700"
-              disabled={pending}
-              onClick={() =>
-                start(async () => {
-                  const res = await removePhotoAction(cvId);
-                  if (res.ok) {
-                    onPhotoChange(null);
-                    setShowPhoto(false);
-                  } else setError(res.error);
-                })
-              }
-              icon={<Trash2 className="size-4" aria-hidden />}
-            >
-              Remover
-            </Button>
-          )}
-        </div>
-      </div>
-      {photoUrl && (
-        <div className="mt-3">
-          <Toggle id="showPhoto" label="Mostrar a fotografia no CV" checked={showPhoto} onChange={setShowPhoto} />
-        </div>
-      )}
-      {error && (
-        <Alert tone="error" className="mt-3">
-          {error}
-        </Alert>
-      )}
     </div>
   );
 }
@@ -324,29 +223,53 @@ export function LanguagesStep({ cv, set, errors }: StepProps) {
   );
 }
 
-// ─── 7. Cursos e secções adicionais ─────────────────────────
-export function CoursesStep({ cv, set, errors }: StepProps) {
+// ─── Cursos ─────────────────────────────────────────────────
+function NamedList({ kind, cv, set, errors }: StepProps & { kind: "courses" | "certifications" }) {
+  const isCourse = kind === "courses";
+  const noun = isCourse ? "Curso" : "Certificação";
+  return (
+    <ListEditor<CvCourse>
+      items={cv[kind]}
+      onChange={(items) => set((c) => ({ ...c, [kind]: items }))}
+      createItem={() => ({ name: "", institution: "", year: "" })}
+      itemTitle={(c, i) => c.name || `${noun} ${i + 1}`}
+      addLabel={isCourse ? "Adicionar curso" : "Adicionar certificação"}
+      emptyText={isCourse ? "Sem cursos adicionados (opcional)." : "Sem certificações adicionadas (opcional)."}
+      max={20}
+      renderItem={(c, i, update) => (
+        <div className="grid gap-4 sm:grid-cols-[1fr_1fr_120px]">
+          <TextField id={`${kind}-${i}-name`} label={noun} value={c.name} onChange={(v) => update({ name: v })} error={errors[`${kind}.${i}.name`]} required maxLength={150} />
+          <TextField id={`${kind}-${i}-inst`} label={isCourse ? "Entidade formadora" : "Entidade emissora"} optional value={c.institution} onChange={(v) => update({ institution: v })} maxLength={120} />
+          <TextField id={`${kind}-${i}-year`} label="Ano" optional value={c.year} onChange={(v) => update({ year: v })} maxLength={20} />
+        </div>
+      )}
+    />
+  );
+}
+
+export function CoursesStep(props: StepProps) {
+  return (
+    <div className="space-y-5">
+      <Tip>Cursos de curta duração e formações profissionais que concluiu (ex.: Informática na óptica do utilizador, Primeiros socorros).</Tip>
+      <NamedList kind="courses" {...props} />
+    </div>
+  );
+}
+
+// ─── Certificações ──────────────────────────────────────────
+export function CertificationsStep(props: StepProps) {
+  return (
+    <div className="space-y-5">
+      <Tip>Certificações e carteiras profissionais reconhecidas (ex.: ordem profissional, carta de condução profissional, certificação de fornecedor).</Tip>
+      <NamedList kind="certifications" {...props} />
+    </div>
+  );
+}
+
+// ─── Secções adicionais + visibilidade ──────────────────────
+export function MoreStep({ cv, set, errors }: StepProps) {
   return (
     <div className="space-y-8">
-      <div className="space-y-4">
-        <Tip>Cursos de curta duração, formações profissionais e certificações que concluiu.</Tip>
-        <ListEditor<CvCourse>
-          items={cv.courses}
-          onChange={(courses) => set((c) => ({ ...c, courses }))}
-          createItem={() => ({ name: "", institution: "", year: "" })}
-          itemTitle={(c, i) => c.name || `Curso ${i + 1}`}
-          addLabel="Adicionar curso ou certificação"
-          emptyText="Sem cursos adicionados (opcional)."
-          max={20}
-          renderItem={(c, i, update) => (
-            <div className="grid gap-4 sm:grid-cols-[1fr_1fr_120px]">
-              <TextField id={`course-${i}-name`} label="Curso / certificação" value={c.name} onChange={(v) => update({ name: v })} error={errors[`courses.${i}.name`]} required maxLength={150} />
-              <TextField id={`course-${i}-inst`} label="Entidade" optional value={c.institution} onChange={(v) => update({ institution: v })} maxLength={120} />
-              <TextField id={`course-${i}-year`} label="Ano" optional value={c.year} onChange={(v) => update({ year: v })} maxLength={20} />
-            </div>
-          )}
-        />
-      </div>
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Secções adicionais (opcional)</h3>
         <p className="text-sm text-slate-600">Ex.: Voluntariado, Prémios, Atividades extracurriculares, Carta de condução.</p>
@@ -366,6 +289,7 @@ export function CoursesStep({ cv, set, errors }: StepProps) {
           )}
         />
       </div>
+      <SectionVisibility cv={cv} set={set} />
     </div>
   );
 }
@@ -404,8 +328,8 @@ export function ReferencesStep({ cv, set, errors }: StepProps) {
   );
 }
 
-// ─── 10. Secções visíveis ───────────────────────────────────
-const TOGGLEABLE: SectionKey[] = ["summary", "experience", "education", "skills", "languages", "courses", "references", "custom"];
+// ─── Secções visíveis ───────────────────────────────────
+const TOGGLEABLE: SectionKey[] = ["summary", "experience", "education", "skills", "languages", "courses", "certifications", "references", "custom"];
 
 export function SectionVisibility({ cv, set }: Pick<StepProps, "cv" | "set">) {
   return (
