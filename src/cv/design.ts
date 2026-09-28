@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { CvLayoutId, SectionKey } from "./types";
+import type { CvLayoutId } from "./types";
 
 /**
  * TemplateDesign — descrição declarativa do aspeto de um modelo de CV.
