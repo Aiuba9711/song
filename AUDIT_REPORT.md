@@ -15,9 +15,9 @@ Classificação: **CRÍTICO** (bloqueia produção / perda de dados ou dinheiro)
 | Testes unitários e de integração (Vitest) | ✅ 376 (31 ficheiros) |
 | Testes E2E (Playwright, computador + Android) | ✅ 54 passaram, 4 ignorados (admin só no computador) |
 | Esquema ↔ migrações (drift) | ✅ sem diferenças; nenhuma migração destrutiva |
-| Problemas CRÍTICOS encontrados | **nenhum** no código |
+| Problemas CRÍTICOS encontrados | 1 — ficheiros de código fora do repositório (item 18), corrigido |
 
-Não foram encontrados problemas críticos no código. A aplicação está pronta para produção **depois** de
+O único problema crítico (item 18: código fora do repositório, que partia o build no Vercel) foi corrigido e verificado com um clone limpo. A aplicação está pronta para produção **depois** de
 configurar os serviços externos obrigatórios (base de dados gerida, armazenamento S3 privado e email
 Resend) — o novo comando `npm run check:prod` verifica essa configuração.
 
@@ -44,6 +44,7 @@ Resend) — o novo comando `npm run check:prod` verifica essa configuração.
 | 15 | Documentação | `DATABASE.md` dizia «10 modelos» e «esquema completo na migração inicial». | BAIXO | Atualizado (40 modelos, catálogo da foto, lista de migrações, verificação de drift, backups antes de migrar). |
 | 16 | Produção | Não havia forma rápida de validar a configuração de produção. | MÉDIO | `npm run check:prod` (`scripts/check-production.ts`): falha se faltar HTTPS, segredo forte, S3, Resend, ou se houver variáveis de teste (`RATE_LIMIT_SCALE≠1`, `AI_MOCK_EXTERNAL`, `IMAGE_*_PROVIDER`). Testes unitários. |
 | 17 | Segredos | `.gitignore` não excluía `.env.production` / `.env.staging`: um ficheiro de segredos de produção podia ser enviado para o GitHub por engano. (Verificado: nenhum segredo real no repositório nem no histórico.) | ALTO | Adicionados ao `.gitignore`. |
+| 18 | Repositório / build | **Descoberto depois da auditoria, no primeiro build do Vercel.** A regra `storage/` do `.gitignore` (para a pasta de uploads locais) também ignorava o código em `src/lib/storage/` (6 ficheiros): nunca tinham chegado ao GitHub e o build no Vercel falhava com 18 erros «Module not found: Can't resolve '@/lib/storage/files'». Os testes locais passavam porque os ficheiros existiam na máquina de desenvolvimento. | CRÍTICO | Regras ancoradas na raiz (`/storage/`, `/storage-test/`), ficheiros adicionados. **Verificado com um clone limpo do repositório** (`git clone` → `npm ci` → `npm run vercel-build` numa base vazia): build completo sem erros. |
 
 ---
 
@@ -101,6 +102,7 @@ Resend) — o novo comando `npm run check:prod` verifica essa configuração.
 ## 4. Recomendações para produção
 
 1. Correr `npm run check:prod` com as variáveis de produção até não haver erros.
+1. Antes de cada publicação, confirmar que o build funciona a partir de um **clone limpo** do GitHub (é o que o Vercel usa), não só na máquina local.
 2. Deploy: `npx prisma migrate deploy && npm run build` (fazer backup antes das migrações). Depois `npm run db:seed` e `npm run admin:create` (e remover `ADMIN_PASSWORD` do ambiente).
 3. No admin: números de pagamento, instruções, preços (CV, carta, foto, pacote), contactos e WhatsApp.
 4. Monitorização: apontar um serviço de *uptime* a `/api/health` (responde 503 se a base de dados falhar) e ativar a recolha de logs do alojamento (os logs já não contêm dados pessoais).
