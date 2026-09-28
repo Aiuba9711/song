@@ -7,7 +7,7 @@
  *   5. next build.
  */
 import { execSync } from "node:child_process";
-import { resolveAppUrl, resolveDatabaseUrl, resolveMigrationUrl } from "../src/lib/deploy-env";
+import { resolveAppUrl, resolveDatabaseUrl, resolveMigrationUrl, resolveStorageDriver } from "../src/lib/deploy-env";
 
 const env = process.env;
 const problems: string[] = [];
@@ -37,9 +37,9 @@ const run = (label: string, cmd: string, extra: Record<string, string> = {}) => 
 };
 
 console.info(`URL do site: ${resolveAppUrl(env)}`);
-if ((env.STORAGE_DRIVER ?? "local") !== "s3") {
-  console.warn("! STORAGE_DRIVER não é «s3»: fotografias e comprovativos ficam em armazenamento TEMPORÁRIO (/tmp) — serve para testar, não para produção.");
-}
+const driver = resolveStorageDriver(env);
+if (driver === "database") console.info("(i) Ficheiros (fotografias, comprovativos) guardados na base de dados PostgreSQL. Para grandes volumes: STORAGE_DRIVER=s3.");
+if (driver === "local") console.warn("! STORAGE_DRIVER=local: no Vercel os ficheiros ficam em /tmp, TEMPORÁRIOS e não partilhados entre funções — as fotografias não funcionam. Use «database» ou «s3».");
 if ((env.EMAIL_DRIVER ?? "console") !== "resend") {
   console.warn("! EMAIL_DRIVER não é «resend»: os emails (recuperação de senha, avisos de pagamento) não são enviados.");
 }

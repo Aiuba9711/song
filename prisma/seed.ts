@@ -14,7 +14,7 @@ import { BACKGROUND_CATALOG, OUTFIT_CATALOG } from "../src/photo/catalog";
 import { createStorage } from "../src/lib/storage/create";
 import { buildFreeCoverLetterDocx, buildFreeCvTemplateDocx } from "../src/kits/free-kit";
 import { randomUUID } from "node:crypto";
-import { resolveDatabaseUrl } from "../src/lib/deploy-env";
+import { resolveDatabaseUrl, resolveLocalStorageDir, resolveStorageDriver } from "../src/lib/deploy-env";
 
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: resolveDatabaseUrl() }) });
 
@@ -155,7 +155,7 @@ async function main() {
   // Ficheiros do produto gratuito (gerados, sem conteúdo fictício do utilizador).
   const free = await db.product.findUniqueOrThrow({ where: { slug: "modelo-gratuito" }, include: { files: true } });
   if (free.files.length === 0) {
-    const storage = createStorage(process.env);
+    const storage = createStorage({ ...process.env, STORAGE_DRIVER: resolveStorageDriver(), STORAGE_LOCAL_DIR: resolveLocalStorageDir() }, { db });
     const files = [
       { name: "Modelo de CV (Word)", fileName: "modelo-cv-emprego-facil-mz.docx", build: buildFreeCvTemplateDocx },
       { name: "Modelo de carta de candidatura (Word)", fileName: "modelo-carta-candidatura.docx", build: buildFreeCoverLetterDocx },

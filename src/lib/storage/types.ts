@@ -5,7 +5,7 @@ export type PutObjectInput = {
 };
 
 export interface StorageProvider {
-  readonly name: "local" | "s3";
+  readonly name: "local" | "s3" | "database";
   put(input: PutObjectInput): Promise<void>;
   get(key: string): Promise<Buffer | null>;
   delete(key: string): Promise<void>;

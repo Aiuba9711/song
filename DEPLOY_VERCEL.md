@@ -52,14 +52,16 @@ abre o site.
   produção do projeto, normalmente `main`) ou desative a proteção em *Settings → Deployment Protection*.
 - Depois de entrar como administrador pela primeira vez, pode remover `ADMIN_PASSWORD`.
 
-## 5. Modo de teste vs. produção
-
-Com apenas os passos acima o site funciona para **testar**, com duas limitações:
+## 5. Ficheiros, email e IA
 
 | Serviço | Sem configurar | Para produção |
 |---|---|---|
-| Armazenamento de ficheiros (fotografias, comprovativos, ficheiros dos kits carregados no admin) | guardados em `/tmp` do servidor — **temporários**, podem desaparecer a qualquer momento | `STORAGE_DRIVER=s3` + `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (+ `S3_ENDPOINT`/`S3_REGION` para R2/B2) — bucket **privado** |
+| Ficheiros (fotografias, comprovativos, ficheiros dos kits) | guardados na **base de dados** (tabela `StoredFile`): privados, persistentes e partilhados por todas as funções. Ocupam espaço da base (o plano gratuito do Neon é pequeno) | com muitos utilizadores: `STORAGE_DRIVER=s3` + `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (+ `S3_ENDPOINT`/`S3_REGION` para R2/B2) — bucket **privado** |
 | Email (recuperação de senha, avisos de pagamento) | não é enviado | `EMAIL_DRIVER=resend` + `RESEND_API_KEY` + `EMAIL_FROM` (domínio verificado) |
+| Assistente de IA («Melhorar com IA») | mostra «Assistente de IA temporariamente indisponível» | `AI_PROVIDER=anthropic` + `ANTHROPIC_API_KEY` (criada em console.anthropic.com, serviço pago) + `AI_MODEL` (ex.: `claude-opus-5-5`; `claude-haiku-4-5` é mais barato) |
+
+Para **ver o assistente a funcionar sem chave**, pode usar `AI_PROVIDER=mock`: é um modo de
+demonstração com correções simples por regras — **não é IA real** e o ecrã indica-o.
 
 O modelo gratuito (CV e carta em Word) funciona sempre: os ficheiros são gerados pela própria aplicação.
 

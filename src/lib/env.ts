@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resolveAppUrl, resolveDatabaseUrl, resolveLocalStorageDir } from "@/lib/deploy-env";
+import { resolveAppUrl, resolveDatabaseUrl, resolveLocalStorageDir, resolveStorageDriver } from "@/lib/deploy-env";
 
 /**
  * Variáveis de ambiente do servidor, validadas uma única vez.
@@ -11,7 +11,7 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL é obrigatório"),
   APP_SECRET: z.string().min(32, "APP_SECRET deve ter pelo menos 32 caracteres"),
 
-  STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
+  STORAGE_DRIVER: z.enum(["local", "s3", "database"]).default("local"),
   STORAGE_LOCAL_DIR: z.string().default("./storage"),
   S3_BUCKET: z.string().optional(),
   S3_REGION: z.string().default("auto"),
@@ -40,6 +40,7 @@ export function env(): Env {
     APP_URL: resolveAppUrl(),
     DATABASE_URL: resolveDatabaseUrl() || undefined,
     STORAGE_LOCAL_DIR: resolveLocalStorageDir(),
+    STORAGE_DRIVER: resolveStorageDriver(),
   });
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");

@@ -109,22 +109,43 @@ describe("escolha do provedor (.env)", () => {
     expect(m).toBeInstanceOf(MockAiProvider);
     expect(m?.external).toBe(false);
     expect(getAiProvider({ AI_PROVIDER: "mock", AI_MOCK_EXTERNAL: "1" })?.external).toBe(true);
-    expect(aiConfig({ AI_TIMEOUT_MS: "abc" }).AI_TIMEOUT_MS).toBe(20000);
+    expect(aiConfig({ AI_TIMEOUT_MS: "abc" }).AI_TIMEOUT_MS).toBe(45000);
   });
 });
 
 describe("AnthropicProvider (SDK oficial, cliente simulado)", () => {
-  const fakeClient = (impl: (...args: unknown[]) => unknown) => ({ messages: { create: vi.fn(impl) } }) as unknown as MessagesClient & { messages: { create: ReturnType<typeof vi.fn> } };
+  type Fake = MessagesClient & { messages: { create: ReturnType<typeof vi.fn> }; beta: { messages: { create: ReturnType<typeof vi.fn> } } };
+  const fakeClient = (impl: (...args: unknown[]) => unknown) => ({ messages: { create: vi.fn(impl) }, beta: { messages: { create: vi.fn(impl) } } }) as unknown as Fake;
+  const answer = async () => ({ stop_reason: "tool_use", content: [{ type: "thinking", thinking: "" }, { type: "tool_use", id: "t1", name: "responder", input: { suggestion: "Ok.", notes: [] } }] });
 
-  it("envia instruções fixas, modelo do .env e resposta estruturada obrigatória", async () => {
-    const client = fakeClient(async () => ({ content: [{ type: "tool_use", id: "t1", name: "responder", input: { suggestion: "Ok.", notes: [] } }] }));
+  it("envia instruções fixas e o modelo do .env; compatível com os modelos atuais (sem temperature, ferramenta em modo auto)", async () => {
+    const client = fakeClient(answer);
     const p = new AnthropicProvider({ apiKey: "chave-de-teste", model: "modelo-de-teste", timeoutMs: 5000, client });
     const request = rewrite("texto");
     const out = await p.complete({ request, prompt: buildPrompt(request), signal: new AbortController().signal });
     expect(out).toEqual({ suggestion: "Ok.", notes: [] });
     const [body, options] = client.messages.create.mock.calls[0]!;
-    expect(body).toMatchObject({ model: "modelo-de-teste", system: SYSTEM_PROMPT, tool_choice: { type: "tool", name: "responder" } });
+    expect(body).toMatchObject({ model: "modelo-de-teste", tool_choice: { type: "auto" } });
+    expect((body as { system: string }).system.startsWith(SYSTEM_PROMPT)).toBe(true);
+    expect((body as { system: string }).system).toContain("«responder»");
+    expect(body).not.toHaveProperty("temperature");
     expect(options).toMatchObject({ timeout: 5000 });
+    expect(client.beta.messages.create).not.toHaveBeenCalled();
+  });
+
+  it("modelos com recusa possível usam o fallback automático do servidor", async () => {
+    const client = fakeClient(answer);
+    const p = new AnthropicProvider({ apiKey: "k", model: "claude-opus-5-5", timeoutMs: 5000, client });
+    const request = rewrite("texto");
+    await p.complete({ request, prompt: buildPrompt(request), signal: new AbortController().signal });
+    expect(client.messages.create).not.toHaveBeenCalled();
+    expect(client.beta.messages.create.mock.calls[0]![0]).toMatchObject({ betas: ["server-side-fallback-2026-07-01"], fallbacks: "default", tool_choice: { type: "auto" } });
+  });
+
+  it("recusa do provedor vira «indisponível»", async () => {
+    const p = new AnthropicProvider({ apiKey: "k", model: "m", timeoutMs: 5000, client: fakeClient(async () => ({ stop_reason: "refusal", content: [] })) });
+    const request = rewrite("texto");
+    await expect(p.complete({ request, prompt: buildPrompt(request), signal: new AbortController().signal })).rejects.toMatchObject({ kind: "unavailable" });
   });
 
   it("falhas do provedor viram erros tratáveis (sem expor detalhes)", async () => {

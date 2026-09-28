@@ -226,7 +226,10 @@ export function PhotoEditor({ photoId, initialSettings, backgrounds, outfits, cv
   const fine = st.rotation - Math.round(st.rotation / 90) * 90;
 
   const save = async (): Promise<boolean> => {
-    if (!source || !adjusted) return false;
+    if (!source || !adjusted) {
+      setMessage({ tone: "info", text: "A fotografia ainda está a ser preparada. Tente novamente dentro de um instante." });
+      return false;
+    }
     setSaving(true);
     setMessage(null);
     try {
@@ -604,7 +607,7 @@ export function PhotoEditor({ photoId, initialSettings, backgrounds, outfits, cv
                   <Info className="mt-0.5 size-4 shrink-0" aria-hidden /> {PASSPORT_NOTICE}
                 </p>
               )}
-              <Button size="lg" className="w-full" onClick={save} disabled={saving || !source} icon={saving ? <Spinner /> : <Save className="size-5" aria-hidden />}>
+              <Button size="lg" className="w-full" onClick={save} disabled={saving || !source || !adjusted} icon={saving ? <Spinner /> : <Save className="size-5" aria-hidden />}>
                 {saving ? "A guardar…" : "Guardar fotografia"}
               </Button>
               <p className="text-xs text-slate-500">A fotografia fica privada na sua conta. Não é publicada nem usada para treinar modelos de IA.</p>
@@ -721,7 +724,7 @@ export function PhotoEditor({ photoId, initialSettings, backgrounds, outfits, cv
             <ArrowLeft className="size-5" aria-hidden />
           </Button>
           {step === "ver" || step === "usar" ? (
-            <Button size="lg" variant={dirty ? "primary" : "success"} className="flex-1" onClick={() => (dirty || !saved ? save() : go("usar"))} disabled={saving || !source} icon={dirty || !saved ? <Save className="size-5" aria-hidden /> : <Check className="size-5" aria-hidden />}>
+            <Button size="lg" variant={dirty ? "primary" : "success"} className="flex-1" onClick={() => (dirty || !saved ? save() : go("usar"))} disabled={saving || !source || !adjusted} icon={dirty || !saved ? <Save className="size-5" aria-hidden /> : <Check className="size-5" aria-hidden />}>
               {dirty || !saved ? "Guardar" : "Usar no CV"}
             </Button>
           ) : (

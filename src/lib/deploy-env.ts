@@ -39,3 +39,13 @@ export function resolveLocalStorageDir(env: Env = process.env): string {
   if (explicit) return explicit;
   return clean(env.VERCEL) ? "/tmp/efmz-storage" : "./storage";
 }
+
+/**
+ * Driver de armazenamento: STORAGE_DRIVER; no Vercel sem configuração usa a base de dados
+ * (persistente e partilhada pelas funções — o /tmp de cada função é isolado e temporário).
+ */
+export function resolveStorageDriver(env: Env = process.env): "local" | "s3" | "database" {
+  const v = clean(env.STORAGE_DRIVER);
+  if (v === "local" || v === "s3" || v === "database") return v;
+  return clean(env.VERCEL) ? "database" : "local";
+}

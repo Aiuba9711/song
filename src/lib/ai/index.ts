@@ -17,7 +17,7 @@ const configSchema = z.object({
   AI_MODEL: z.string().trim().optional(),
   /** Só testes: o provedor de demonstração pede consentimento como se fosse externo */
   AI_MOCK_EXTERNAL: z.string().optional(),
-  AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).catch(20_000).default(20_000),
+  AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).catch(45_000).default(45_000),
 });
 
 export type AiConfig = z.infer<typeof configSchema>;

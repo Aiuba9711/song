@@ -1,3 +1,4 @@
+import { DatabaseStorageProvider, type StoredFileClient } from "./database";
 import { LocalStorageProvider } from "./local";
 import { S3StorageProvider } from "./s3";
 import type { StorageProvider } from "./types";
@@ -14,8 +15,15 @@ type StorageEnv = {
   [key: string]: unknown;
 };
 
-/** Cria o fornecedor a partir das variáveis de ambiente (usado pela app e pelos scripts). */
-export function createStorage(e: StorageEnv): StorageProvider {
+/**
+ * Cria o fornecedor a partir das variáveis de ambiente (usado pela app e pelos scripts).
+ * O driver «database» precisa do cliente Prisma de quem chama (app ou script).
+ */
+export function createStorage(e: StorageEnv, deps: { db?: StoredFileClient } = {}): StorageProvider {
+  if (e.STORAGE_DRIVER === "database") {
+    if (!deps.db) throw new Error("STORAGE_DRIVER=database requer o cliente da base de dados");
+    return new DatabaseStorageProvider(deps.db);
+  }
   if (e.STORAGE_DRIVER === "s3") {
     if (!e.S3_BUCKET || !e.S3_ACCESS_KEY_ID || !e.S3_SECRET_ACCESS_KEY) {
       throw new Error("STORAGE_DRIVER=s3 requer S3_BUCKET, S3_ACCESS_KEY_ID e S3_SECRET_ACCESS_KEY");

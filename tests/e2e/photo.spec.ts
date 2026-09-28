@@ -179,6 +179,8 @@ test.describe("foto profissional", () => {
     await page.getByRole("link", { name: "Foto Profissional" }).click();
     await expect(page.getByRole("cell", { name: "BackgroundRemovalProvider" })).toBeVisible();
     await expect(page.getByText("NÃO CONFIGURADO").first()).toBeVisible();
+    // Na navegação no cliente o Next.js atualiza o <title> logo a seguir ao conteúdo.
+    await expect(page).toHaveTitle(/Foto Profissional/);
     await expectAccessible(page);
 
     // Fundos: adicionar, desativar

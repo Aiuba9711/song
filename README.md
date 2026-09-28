@@ -100,7 +100,7 @@ Todas estão documentadas em [`.env.example`](./.env.example). Resumo:
 | `RATE_LIMIT_SCALE` | não | Multiplicador de limites (manter `1` em produção) |
 | `AI_PROVIDER` | não | `anthropic` (API oficial), `mock` (demonstração/testes, sem IA real) ou vazio (assistente indisponível) |
 | `ANTHROPIC_API_KEY`, `AI_MODEL` | se `anthropic` | Chave e ID do modelo (ver documentação do provedor). Nunca no código |
-| `AI_TIMEOUT_MS` | não | Tempo máximo de resposta da IA (predefinição 20000) |
+| `AI_TIMEOUT_MS` | não | Tempo máximo de resposta da IA (predefinição 45000) |
 | `APP_ENV` | não | `development`, `staging` ou `production` (vazio = segue `NODE_ENV`) |
 | `PHOTO_MAX_UPLOAD_MB` | não | Tamanho máximo de envio de fotografias (1–25 MB; predefinição 10) |
 | `IMAGE_BG_PROVIDER`, `IMAGE_CLOTHING_PROVIDER` | não | Serviços externos de imagem — **nenhum implementado**; deixar vazios (ver PHOTO_MODULE.md) |

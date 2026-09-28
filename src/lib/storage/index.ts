@@ -1,5 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { createStorage } from "./create";
 import type { StorageProvider } from "./types";
@@ -9,7 +10,7 @@ export type { StorageProvider } from "./types";
 let instance: StorageProvider | null = null;
 
 export function storage(): StorageProvider {
-  instance ??= createStorage(env());
+  instance ??= createStorage(env(), { db });
   return instance;
 }
 

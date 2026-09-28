@@ -2,7 +2,7 @@
  * Verificação da configuração de PRODUÇÃO (sem rede, sem inventar valores): indica o que falta
  * ou está inseguro antes de publicar. Usada por `npm run check:prod`.
  */
-import { resolveAppUrl, resolveDatabaseUrl } from "./deploy-env";
+import { resolveAppUrl, resolveDatabaseUrl, resolveStorageDriver } from "./deploy-env";
 
 export type CheckLevel = "ERRO" | "AVISO" | "OK";
 export type CheckResult = { level: CheckLevel; key: string; message: string };
@@ -33,11 +33,15 @@ export function checkProductionEnv(env: Env): CheckResult[] {
   else add("OK", "DATABASE_URL", "Definido com SSL.");
 
   // Armazenamento (fotografias, comprovativos, ficheiros dos kits)
-  if (v("STORAGE_DRIVER") !== "s3") add("ERRO", "STORAGE_DRIVER", "Use «s3» em produção: o disco de plataformas serverless é efémero (os ficheiros perdem-se).");
-  else {
+  const driver = resolveStorageDriver(env);
+  if (driver === "s3") {
     const missing = ["S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"].filter((k) => !v(k));
     if (missing.length) add("ERRO", "S3_*", `Em falta: ${missing.join(", ")}.`);
     else add("OK", "STORAGE_DRIVER", "s3 configurado (confirme que o bucket é PRIVADO e tem versionamento).");
+  } else if (driver === "database") {
+    add("AVISO", "STORAGE_DRIVER", "Ficheiros guardados na base de dados: funciona e é privado, mas ocupa espaço da base (planos gratuitos são pequenos). Para muitos utilizadores, use S3/R2.");
+  } else {
+    add("ERRO", "STORAGE_DRIVER", "«local» não serve em produção serverless (o disco é efémero). Use «s3» ou «database».");
   }
 
   // Email (recuperação de senha, avisos de pagamento)
