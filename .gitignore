@@ -19,8 +19,9 @@ src/generated/
 .env.staging
 .env.development
 
-# ficheiros enviados em desenvolvimento (driver local)
-storage/
+# ficheiros enviados em desenvolvimento (driver local) — só as pastas na RAIZ do projeto
+# (sem a barra inicial, «storage/» também apanhava o código em src/lib/storage/)
+/storage/
 
 # testes
 coverage/
@@ -30,4 +31,4 @@ test-results/
 # sistema
 .DS_Store
 *.log
-storage-test/
+/storage-test/
