@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Emprego Fácil MZ — plataforma de CVs, cartas e kits de candidatura para Moçambique",
   "engines": {
-    "node": ">=20.9"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "next dev",
