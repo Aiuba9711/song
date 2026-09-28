@@ -9,6 +9,12 @@ Sem elas o build pára com a mensagem «Configuração do Vercel incompleta» a 
 
 ---
 
+## 0. Configuração no repositório
+
+O ficheiro `vercel.json` fixa o *framework* **Next.js** e o comando de build (`npm run vercel-build`).
+Sem ele, um projeto criado no Vercel antes de existir código Next.js fica como site estático
+(«Framework Preset: Other»): o build termina com sucesso mas todas as páginas dão **404: NOT_FOUND**.
+
 ## 1. Um só projeto
 
 O repositório está ligado a **dois** projetos no Vercel («song» e «teste»); cada envio para o GitHub
