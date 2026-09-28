@@ -2,6 +2,8 @@
  * Verificação da configuração de PRODUÇÃO (sem rede, sem inventar valores): indica o que falta
  * ou está inseguro antes de publicar. Usada por `npm run check:prod`.
  */
+import { resolveAppUrl, resolveDatabaseUrl } from "./deploy-env";
+
 export type CheckLevel = "ERRO" | "AVISO" | "OK";
 export type CheckResult = { level: CheckLevel; key: string; message: string };
 
@@ -13,7 +15,7 @@ export function checkProductionEnv(env: Env): CheckResult[] {
   const v = (k: string) => (env[k] ?? "").trim();
 
   // Base
-  const url = v("APP_URL");
+  const url = v("APP_URL") || (v("VERCEL_URL") ? resolveAppUrl(env) : "");
   if (!url) add("ERRO", "APP_URL", "Em falta.");
   else if (!url.startsWith("https://")) add("ERRO", "APP_URL", "Tem de usar https:// em produção.");
   else if (/localhost|127\.0\.0\.1/.test(url)) add("ERRO", "APP_URL", "Aponta para localhost.");
@@ -24,7 +26,7 @@ export function checkProductionEnv(env: Env): CheckResult[] {
   else if (/^dev-only|change-me|example|exemplo/i.test(secret)) add("ERRO", "APP_SECRET", "Parece um valor de exemplo — gere um segredo novo (ex.: openssl rand -base64 48).");
   else add("OK", "APP_SECRET", "Definido.");
 
-  const db = v("DATABASE_URL");
+  const db = resolveDatabaseUrl(env);
   if (!db) add("ERRO", "DATABASE_URL", "Em falta.");
   else if (/localhost|127\.0\.0\.1/.test(db)) add("AVISO", "DATABASE_URL", "Aponta para uma base local.");
   else if (!/sslmode=(require|verify-full|verify-ca)/.test(db)) add("AVISO", "DATABASE_URL", "Sem sslmode=require — use ligação cifrada à base de dados.");

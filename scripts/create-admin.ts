@@ -9,6 +9,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { hashPassword } from "../src/lib/auth/password";
 import { emailSchema, passwordSchema } from "../src/lib/validation";
+import { resolveDatabaseUrl } from "../src/lib/deploy-env";
 
 async function main() {
   const email = emailSchema.safeParse(process.env.ADMIN_EMAIL ?? "");
@@ -19,7 +20,7 @@ async function main() {
   if (!password.success) throw new Error(`ADMIN_PASSWORD inválida: ${password.error.issues[0]?.message}`);
   if (password.data.length < 12) throw new Error("ADMIN_PASSWORD deve ter pelo menos 12 caracteres.");
 
-  const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
+  const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: resolveDatabaseUrl() }) });
   try {
     const passwordHash = await hashPassword(password.data);
     const user = await db.user.upsert({

@@ -14,8 +14,9 @@ import { BACKGROUND_CATALOG, OUTFIT_CATALOG } from "../src/photo/catalog";
 import { createStorage } from "../src/lib/storage/create";
 import { buildFreeCoverLetterDocx, buildFreeCvTemplateDocx } from "../src/kits/free-kit";
 import { randomUUID } from "node:crypto";
+import { resolveDatabaseUrl } from "../src/lib/deploy-env";
 
-const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
+const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: resolveDatabaseUrl() }) });
 
 type SeedProduct = {
   slug: string;

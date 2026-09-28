@@ -99,7 +99,7 @@ export async function listUserOrders(userId: string) {
 
 /** Verifica se o utilizador pode descarregar um ficheiro de produto. */
 export async function getEntitledFile(userId: string, fileId: string) {
-  const file = await db.productFile.findUnique({ where: { id: fileId } });
+  const file = await db.productFile.findUnique({ where: { id: fileId }, include: { product: { select: { slug: true, priceMinor: true } } } });
   if (!file) return null;
   const owns = await db.orderItem.findFirst({
     where: { productId: file.productId, order: { userId, status: "PAID" } },

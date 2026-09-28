@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { resolveAppUrl, resolveDatabaseUrl, resolveLocalStorageDir } from "@/lib/deploy-env";
 
 /**
  * Variáveis de ambiente do servidor, validadas uma única vez.
@@ -33,7 +34,13 @@ let cached: Env | null = null;
 
 export function env(): Env {
   if (cached) return cached;
-  const parsed = schema.safeParse(process.env);
+  const parsed = schema.safeParse({
+    ...process.env,
+    // Valores automáticos no Vercel (URL do deploy, variáveis das integrações de PostgreSQL, /tmp).
+    APP_URL: resolveAppUrl(),
+    DATABASE_URL: resolveDatabaseUrl() || undefined,
+    STORAGE_LOCAL_DIR: resolveLocalStorageDir(),
+  });
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
     throw new Error(`Configuração inválida: ${issues}`);
@@ -47,6 +54,6 @@ export function env(): Env {
 }
 
 export function appUrl(path = ""): string {
-  const base = (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const base = resolveAppUrl();
   return `${base}${path}`;
 }

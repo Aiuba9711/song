@@ -133,3 +133,12 @@ export async function buildFreeCoverLetterDocx(): Promise<Buffer> {
   });
   return Packer.toBuffer(doc);
 }
+
+/**
+ * Ficheiros do modelo gratuito por nome (os mesmos que o seed guarda). Permite regenerá-los se o
+ * armazenamento os perder (ex.: armazenamento temporário num deploy de teste).
+ */
+export const FREE_KIT_BUILDERS: Record<string, () => Promise<Buffer>> = {
+  "modelo-cv-emprego-facil-mz.docx": buildFreeCvTemplateDocx,
+  "modelo-carta-candidatura.docx": buildFreeCoverLetterDocx,
+};

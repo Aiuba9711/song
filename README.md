@@ -158,6 +158,8 @@ Cobertura principal:
 
 ## Produção e deploy
 
+**Vercel:** guia passo a passo em [DEPLOY_VERCEL.md](./DEPLOY_VERCEL.md) (o script `vercel-build` aplica migrações, dados iniciais e build automaticamente).
+
 Configuração recomendada (baixo custo):
 
 1. **PostgreSQL gerido** — Neon, Supabase ou Railway (plano gratuito serve para começar). Usar `sslmode=require`.

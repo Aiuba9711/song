@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/lib/auth/session";
 import { attachment, jsonError, PRIVATE_FILE_HEADERS } from "@/lib/http";
 import { LIMITS, rateLimit } from "@/lib/security/rate-limit";
+import { FREE_KIT_BUILDERS } from "@/kits/free-kit";
 import { storage } from "@/lib/storage";
 import { recordDownload } from "@/server/cv";
 import { getEntitledFile } from "@/server/orders";
@@ -26,7 +27,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ fil
   const signed = await storage().getSignedDownloadUrl(file.storageKey, file.fileName, 300);
   if (signed) return Response.redirect(signed, 302);
 
-  const data = await storage().get(file.storageKey);
+  let data = await storage().get(file.storageKey);
+  // Modelo gratuito: ficheiros gerados pela própria aplicação — regenerados se o armazenamento os perdeu.
+  const rebuild = FREE_KIT_BUILDERS[file.fileName];
+  if (!data && rebuild && file.product.slug === "modelo-gratuito") {
+    data = await rebuild();
+    await storage().put({ key: file.storageKey, body: data, contentType: file.mimeType }).catch(() => undefined);
+  }
   if (!data) return jsonError(404, "Ficheiro indisponível. Contacte o suporte.");
   return new Response(new Uint8Array(data), {
     headers: {
